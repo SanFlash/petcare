@@ -113,3 +113,12 @@ html[data-theme="dark"] input[type="date"],html[data-theme="dark"] input[type="t
 @media(prefers-reduced-motion:reduce){
  .profile-pet-image .photo-edit-btn{transition:none}
 }
+
+/* Modal scrolling stability */
+.modal-backdrop{touch-action:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.modal{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.modal form{padding-bottom:4px}
+@media(max-width:640px){
+ .modal-backdrop{align-items:flex-start;min-height:100dvh}
+ .modal{width:100%;margin:auto 0;max-height:calc(100dvh - 20px)}
+}
