@@ -182,7 +182,7 @@ def reminders(pid):
     if not p:return err("NOT_FOUND","Pet not found.",404)
     if request.method=="GET":
         rows=Reminder.query.filter_by(pet_id=p.id).order_by(Reminder.due_date.asc()).all()
-        return ok([{"id":r.id,"title":r.title,"type":r.reminder_type,"due_date":r.due_date.isoformat(),"status":r.status,"recurrence":r.recurrence,"notes":r.notes} for r in rows])
+        return ok([{"id":r.id,"title":r.title,"type":r.reminder_type,"due_date":r.due_date.isoformat(),"due_time":r.due_time.isoformat() if r.due_time else None,"status":r.status,"recurrence":r.recurrence,"notes":r.notes} for r in rows])
     d=request.get_json(silent=True) or {}
     if not str(d.get("title","")).strip():return err("VALIDATION_ERROR","Reminder title is required.",422)
     try:due=pdate(d.get("due_date")) or date.today()
