@@ -5,7 +5,7 @@ from datetime import datetime,date,time,timedelta
 import calendar
 from sqlalchemy import or_
 from .extensions import db,limiter
-from .models import User,Pet,MedicalRecord,Vaccination,Medication,Appointment,Reminder,Notification
+from .models import User,Pet,MedicalRecord,Vaccination,Medication,Appointment,Reminder,Notification,WeightRecord,PreventiveCare,MedicalDocument
 from .services.notifications import notify_owner,process_due_reminders,send_sms
 import re,io,base64,os
 from uuid import uuid4
@@ -235,6 +235,45 @@ def pet_create():
 @jwt_required(locations=["cookies"])
 def pets_list():return ok([pd(p) for p in Pet.query.filter_by(owner_id=user().id).order_by(Pet.name).all()])
 
+
+@api.patch("/pets/<int:pid>")
+@jwt_required(locations=["cookies"])
+def pet_update(pid):
+    u,p=owned(pid)
+    if not p:return err("NOT_FOUND","Pet not found.",404)
+    d=request.get_json(silent=True) or {}
+    name=str(d.get("name","")).strip()
+    species=str(d.get("species","")).strip()
+    if not name or not species:return err("VALIDATION_ERROR","Pet name and species are required.",422)
+    try:w=float(d["weight"]) if d.get("weight") not in (None,"") else None
+    except:return err("VALIDATION_ERROR","Weight must be numeric.",422)
+    try:dob=pdate(d.get("date_of_birth"))
+    except ValueError as e:return err("VALIDATION_ERROR",str(e),422)
+    p.name=name;p.species=species;p.breed=d.get("breed");p.gender=d.get("gender");p.date_of_birth=dob
+    p.weight=w;p.weight_unit=d.get("weight_unit") or "kg";p.color=d.get("color");p.microchip_id=d.get("microchip_id")
+    p.allergies=d.get("allergies");p.conditions=d.get("conditions");p.diet=d.get("diet")
+    p.behavior_notes=d.get("behavior_notes");p.emergency_notes=d.get("emergency_notes")
+    db.session.commit()
+    return ok(pd(p))
+
+@api.delete("/pets/<int:pid>")
+@jwt_required(locations=["cookies"])
+def pet_delete(pid):
+    u,p=owned(pid)
+    if not p:return err("NOT_FOUND","Pet not found.",404)
+    # Remove dependent care records before deleting the parent pet so this also
+    # works on databases that enforce foreign-key constraints strictly.
+    MedicalRecord.query.filter_by(pet_id=p.id).delete(synchronize_session=False)
+    Vaccination.query.filter_by(pet_id=p.id).delete(synchronize_session=False)
+    Medication.query.filter_by(pet_id=p.id).delete(synchronize_session=False)
+    Appointment.query.filter_by(pet_id=p.id).delete(synchronize_session=False)
+    Reminder.query.filter_by(pet_id=p.id).delete(synchronize_session=False)
+    WeightRecord.query.filter_by(pet_id=p.id).delete(synchronize_session=False)
+    PreventiveCare.query.filter_by(pet_id=p.id).delete(synchronize_session=False)
+    MedicalDocument.query.filter_by(pet_id=p.id).delete(synchronize_session=False)
+    db.session.delete(p)
+    db.session.commit()
+    return ok({"id":pid,"deleted":True})
 
 @api.post("/pets/<int:pid>/photo")
 @limiter.limit("20 per minute")
