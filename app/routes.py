@@ -2,6 +2,7 @@ from flask import Blueprint,jsonify,request,render_template
 from flask_jwt_extended import create_access_token,set_access_cookies,unset_jwt_cookies,jwt_required,verify_jwt_in_request,get_jwt_identity,get_jwt
 from werkzeug.security import check_password_hash,generate_password_hash
 from datetime import datetime,date,time,timedelta
+import calendar
 from sqlalchemy import or_
 from .extensions import db,limiter
 from .models import User,Pet,MedicalRecord,Vaccination,Medication,Appointment,Reminder,Notification
@@ -53,7 +54,7 @@ def dashboard():
     overdue=[r for r in reminders if r.due_date<today and r.status!="completed"]
     due_soon=[r for r in reminders if today<=r.due_date<=today+timedelta(days=7)]
     today_events=[r for r in reminders if r.due_date==today]
-    return render_template("dashboard.html",user=user,pets=pets,reminders=reminders,appointments=appointments,vaccinations=vaccinations,medications=medications,medical_records=medical_records,unread=unread,today=today,overdue=overdue,due_soon=due_soon,today_events=today_events)
+    return render_template("dashboard.html",user=user,pets=pets,reminders=reminders,appointments=appointments,vaccinations=vaccinations,medications=medications,medical_records=medical_records,unread=unread,today=today,overdue=overdue,due_soon=due_soon,today_events=today_events,month_weeks=calendar.Calendar(firstweekday=0).monthdatescalendar(today.year,today.month))
 
 @web.get("/pets/<int:pet_id>")
 @jwt_required(optional=True,locations=["cookies"])
