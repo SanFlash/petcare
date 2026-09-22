@@ -12,6 +12,22 @@
 <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
+<div id="pawcareLoader" class="pawcare-loader" aria-label="Loading PAWCARE 360" role="status">
+  <div class="loader-cinema" aria-hidden="true"></div>
+  <div class="loader-vignette" aria-hidden="true"></div>
+  <div class="loader-particles loader-particles-a" aria-hidden="true"></div>
+  <div class="loader-particles loader-particles-b" aria-hidden="true"></div>
+  <div class="loader-core">
+    <div class="loader-logo-orbit">
+      <span class="loader-ring ring-one"></span><span class="loader-ring ring-two"></span>
+      <div class="loader-logo-glow"></div>
+      <img src="{{ url_for('static',filename='images/logo.png') }}" alt="">
+    </div>
+    <div class="loader-wordmark"><strong>PAWCARE</strong><em>360</em></div>
+    <div class="loader-progress"><span></span></div>
+    <div class="loader-caption">INITIALIZING ANIMAL CARE CENTER</div>
+  </div>
+</div>
 {% set public_page=request.path in ['/', '/login', '/register'] %}
 
 {% if public_page %}
