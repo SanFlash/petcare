@@ -64,7 +64,7 @@ def dashboard():
             return factory()
         except Exception:
             db.session.rollback()
-            web.logger.exception("Dashboard query failed: %s (user=%s)", label, uid)
+            current_app.logger.exception("Dashboard query failed: %s (user=%s)", label, uid)
             return [] if default is None else default
 
     pets=safe_query("pets", lambda: Pet.query.filter_by(owner_id=uid).order_by(Pet.name).all())
