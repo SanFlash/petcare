@@ -107,38 +107,32 @@ function initSidebar(){
  const open=()=>{side?.classList.add('open');scrim?.classList.add('open')};
  const close=()=>{side?.classList.remove('open');scrim?.classList.remove('open')};
  qs('#mobileMenu')?.addEventListener('click',open);
- qs('#sidebarClose')?.addEventListener('click',close);
  scrim?.addEventListener('click',close);
 
  const setActive=activeLink=>{
    links.forEach(a=>a.classList.toggle('active',a===activeLink));
  };
 
- const dashboardLink=href=>{
-   try{
-     const u=new URL(href,location.origin);
-     return u.pathname==='/dashboard'&&u.hash;
-   }catch{return false}
+ const linkTarget=href=>{
+   try{return new URL(href,location.origin)}catch{return null}
  };
 
  const activateFromLocation=()=>{
    const currentPath=location.pathname;
    const currentHash=location.hash||'';
    let active=null;
-
    if(currentPath==='/dashboard'){
      if(currentHash){
-       active=links.find(a=>{
-         const u=new URL(a.getAttribute('href')||'',location.origin);
-         return u.pathname==='/dashboard'&&u.hash===currentHash;
-       });
+       active=links.find(a=>{const u=linkTarget(a.getAttribute('href')||'');return u?.pathname==='/dashboard'&&u.hash===currentHash});
      }
      active=active||links.find(a=>a.getAttribute('href')==='/dashboard');
+   }else if(currentPath.startsWith('/pets/')){
+     if(currentHash){
+       active=links.find(a=>{const u=linkTarget(a.getAttribute('href')||'');return u?.pathname===currentPath&&u.hash===currentHash});
+     }
+     active=active||links.find(a=>a.getAttribute('href')==='#overview');
    }else{
-     active=links.find(a=>{
-       const u=new URL(a.getAttribute('href')||'',location.origin);
-       return u.pathname===currentPath&&u.hash===currentHash;
-     });
+     active=links.find(a=>{const u=linkTarget(a.getAttribute('href')||'');return u?.pathname===currentPath&&u.hash===currentHash});
    }
    setActive(active||null);
  };
@@ -146,23 +140,28 @@ function initSidebar(){
  links.forEach(a=>{
    a.addEventListener('click',e=>{
      const href=a.getAttribute('href')||'';
+     const u=linkTarget(href);
      if(innerWidth<901)close();
 
-     if(location.pathname==='/dashboard'&&dashboardLink(href)){
-       e.preventDefault();
-       const u=new URL(href,location.origin);
-       const target=document.querySelector(u.hash);
-       setActive(a);
-       history.pushState(null,'',u.pathname+u.hash);
-       if(target){
-         const offset=window.innerWidth<=640?78:92;
-         const top=target.getBoundingClientRect().top+scrollY-offset;
-         window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+     if(u?.hash){
+       const samePage=u.pathname===location.pathname;
+       if(samePage){
+         e.preventDefault();
+         setActive(a);
+         const target=document.querySelector(u.hash);
+         if(target){
+           const offset=window.innerWidth<=640?76:94;
+           const top=target.getBoundingClientRect().top+scrollY-offset;
+           history.pushState(null,'',u.hash);
+           window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+         }
+         return;
        }
+       // Dashboard section links intentionally navigate back to the dashboard.
        return;
      }
 
-     if(location.pathname==='/dashboard'&&href==='/dashboard'){
+     if(u?.pathname==='/dashboard'&&location.pathname==='/dashboard'){
        e.preventDefault();
        setActive(a);
        history.pushState(null,'','/dashboard');
@@ -173,21 +172,18 @@ function initSidebar(){
 
  activateFromLocation();
 
+ // Keep dashboard section highlighting synchronized with scroll.
  if(location.pathname==='/dashboard'&&'IntersectionObserver' in window){
    const sectionLinks=new Map();
    links.forEach(a=>{
-     const href=a.getAttribute('href')||'';
-     const hash=dashboardLink(href);
-     if(hash){
-       const target=document.querySelector(hash);
+     const u=linkTarget(a.getAttribute('href')||'');
+     if(u?.pathname==='/dashboard'&&u.hash){
+       const target=document.querySelector(u.hash);
        if(target&&!sectionLinks.has(target.id))sectionLinks.set(target.id,a);
      }
    });
-
    const observer=new IntersectionObserver(entries=>{
-     const visible=entries
-       .filter(entry=>entry.isIntersecting)
-       .sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];
+     const visible=entries.filter(x=>x.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];
      if(!visible)return;
      const active=sectionLinks.get(visible.target.id);
      if(!active)return;
@@ -195,11 +191,27 @@ function initSidebar(){
      const nextHash='#'+visible.target.id;
      if(location.hash!==nextHash)history.replaceState(null,'',nextHash);
    },{rootMargin:'-18% 0px -62% 0px',threshold:[0,.2,.5,.8]});
+   sectionLinks.forEach((_,id)=>{const target=document.getElementById(id);if(target)observer.observe(target)});
+ }
 
-   sectionLinks.forEach((_,id)=>{
-     const target=document.getElementById(id);
-     if(target)observer.observe(target);
+ // On a pet passport, the sidebar follows the currently visible pet section.
+ if(location.pathname.startsWith('/pets/')&&'IntersectionObserver' in window){
+   const sectionLinks=new Map();
+   links.forEach(a=>{
+     const u=linkTarget(a.getAttribute('href')||'');
+     if(u?.pathname===location.pathname&&u.hash){
+       const target=document.querySelector(u.hash);
+       if(target)sectionLinks.set(target.id,a);
+     }
    });
+   const observer=new IntersectionObserver(entries=>{
+     const visible=entries.filter(x=>x.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];
+     if(!visible)return;
+     const active=sectionLinks.get(visible.target.id);
+     if(active)setActive(active);
+     if(location.hash!==('#'+visible.target.id))history.replaceState(null,'','#'+visible.target.id);
+   },{rootMargin:'-22% 0px -58% 0px',threshold:[0,.2,.5,.8]});
+   sectionLinks.forEach((_,id)=>{const target=document.getElementById(id);if(target)observer.observe(target)});
  }
 
  window.addEventListener('hashchange',activateFromLocation);
