@@ -17,8 +17,7 @@
 {% if public_page %}
 <header class="public-topbar">
   <a class="brand" href="/">
-    <span class="brand-mark"><i data-lucide="paw-print"></i></span>
-    <span class="brand-copy"><strong>PAWCARE</strong><em>360</em></span>
+    <span class="brand-mark"><img src="{{ url_for('static',filename='images/pawcare360-logo.svg') }}" alt="PAWCARE 360"></span>
   </a>
   <nav class="public-nav">
     <a href="/">Home</a>
@@ -32,8 +31,7 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-head">
       <a class="brand" href="/dashboard" aria-label="PAWCARE 360 dashboard">
-        <span class="brand-mark"><i data-lucide="paw-print"></i></span>
-        <span class="brand-copy"><strong>PAWCARE</strong><em>360</em></span>
+        <span class="brand-mark"><img src="{{ url_for('static',filename='images/pawcare360-logo.svg') }}" alt="PAWCARE 360"></span>
       </a>
       <button class="icon-btn sidebar-close" id="sidebarClose" aria-label="Close navigation"><i data-lucide="x"></i></button>
     </div>
