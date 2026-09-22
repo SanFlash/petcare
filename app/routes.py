@@ -1,10 +1,11 @@
 from flask import Blueprint,jsonify,request,render_template
 from flask_jwt_extended import create_access_token,set_access_cookies,unset_jwt_cookies,jwt_required,verify_jwt_in_request,get_jwt_identity,get_jwt
 from werkzeug.security import check_password_hash,generate_password_hash
-from datetime import datetime,date
+from datetime import datetime,date,time
 from .extensions import db,limiter
 from .models import User,Pet,MedicalRecord,Vaccination,Medication,Appointment,Reminder,Notification
 from .services.notifications import notify_owner,process_due_reminders
+import re
 
 web=Blueprint("web",__name__)
 api=Blueprint("api",__name__)
@@ -201,8 +202,11 @@ def profile():
     if request.method=="GET":return ok({"id":u.id,"full_name":u.full_name,"email":u.email,"phone":u.phone,"role":u.role})
     d=request.get_json(silent=True) or {}
     if "full_name" in d and len(str(d["full_name"]).strip())>=2:u.full_name=str(d["full_name"]).strip()
-    if "phone" in d:u.phone=str(d["phone"]).strip() or None
-    db.session.commit();return ok({"id":u.id,"full_name":u.full_name,"email":u.email,"phone":u.phone})
+    if "phone" in d:
+        phone=str(d["phone"]).strip() or None
+        if phone and not re.fullmatch(r"\\+?[1-9]\\d{7,14}",phone): return err("VALIDATION_ERROR","Use a valid mobile number, preferably in international E.164 format such as +919876543210.",422)
+        u.phone=phone
+    db.session.commit();return ok({"id":u.id,"full_name":u.full_name,"email":u.email,"phone":u.phone,"role":u.role})
 
 @api.get("/notifications/preferences")
 @jwt_required(locations=["cookies"])
