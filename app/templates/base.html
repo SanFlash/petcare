@@ -1,1 +1,65 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f7f3ea"><meta name="description" content="PetCare — a friendly, intelligent digital health companion for pets."><title>{% block title %}PetCare{% endblock %}</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap"><link rel="stylesheet" href="{{ url_for('static',filename='app.css') }}"></head><body><div class="site-bg"><span class="blob blob-one"></span><span class="blob blob-two"></span><span class="blob blob-three"></span></div><header class="topbar glass"><a class="brand" href="/"><span class="brand-mark">🐾</span><span>Pet<span>Care</span></span></a><nav class="main-nav"><a class="nav-link" href="/">Home</a><a class="nav-link" href="/dashboard">My pets</a><a class="nav-link" href="/login">Sign in</a><a class="nav-link" href="/register">Get started</a><a class="nav-link admin-link" href="/admin">Admin</a><button id="notificationBtn" class="icon-btn" title="Notifications" aria-label="Notifications">🔔<span id="notificationCount" class="count"></span></button><button id="logoutBtn" class="ghost nav-logout">Logout</button></nav></header><main class="container">{% block content %}{% endblock %}</main><div id="toastStack" class="toast-stack"></div><div id="notificationPanel" class="notification-panel glass" aria-live="polite"><div class="section-head"><div><span class="eyebrow">CARE ALERTS</span><h3>Notifications</h3></div><button class="ghost" onclick="closeNotifications()" aria-label="Close">×</button></div><div id="notificationList"><p class="muted">Sign in to see your care alerts.</p></div></div><footer><div class="footer-paw">🐾</div><strong>PetCare</strong><span> · A calmer, kinder way to stay on top of pet health.</span><small>Tracking support, not veterinary diagnosis.</small></footer><script src="{{ url_for('static',filename='app.js') }}"></script></body></html>
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f7fafc">
+<meta name="description" content="PAWCARE 360 — Every Paw. Every Record. Every Reminder.">
+<title>{% block title %}PAWCARE 360{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static',filename='app.css') }}">
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="app-noise"></div>
+<div class="app-shell">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <a class="brand" href="/" aria-label="PAWCARE 360 home"><span class="brand-mark"><i data-lucide="paw-print"></i></span><span class="brand-copy"><strong>PAWCARE</strong><em>360</em></span></a>
+    <button class="icon-btn sidebar-close" id="sidebarClose" aria-label="Close navigation"><i data-lucide="x"></i></button>
+  </div>
+  <div class="sidebar-scroll">
+    <span class="nav-caption">WORKSPACE</span>
+    <nav class="side-nav" aria-label="Primary navigation">
+      <a href="/dashboard" class="side-link"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+      <a href="/dashboard#pets" class="side-link"><i data-lucide="paw-print"></i><span>Pets</span></a>
+      <a href="/dashboard#appointments" class="side-link"><i data-lucide="calendar-days"></i><span>Appointments</span></a>
+      <a href="/dashboard#vaccinations" class="side-link"><i data-lucide="syringe"></i><span>Vaccinations</span></a>
+      <a href="/dashboard#medications" class="side-link"><i data-lucide="pill"></i><span>Medications</span></a>
+      <a href="/dashboard#records" class="side-link"><i data-lucide="file-heart"></i><span>Health Records</span></a>
+      <a href="/dashboard#reminders" class="side-link"><i data-lucide="bell-ring"></i><span>Reminders</span></a>
+      <a href="/dashboard#analytics" class="side-link"><i data-lucide="chart-no-axes-combined"></i><span>Analytics</span></a>
+      <a href="/dashboard#records" class="side-link"><i data-lucide="files"></i><span>Documents</span></a>
+      <a href="/dashboard#owners" class="side-link"><i data-lucide="users"></i><span>Owners</span></a>
+    </nav>
+    <span class="nav-caption nav-caption-gap">SYSTEM</span>
+    <nav class="side-nav">
+      <a href="/dashboard#settings" class="side-link"><i data-lucide="settings-2"></i><span>Settings</span></a>
+      <a href="/admin" class="side-link admin-link"><i data-lucide="shield-check"></i><span>Admin</span></a>
+    </nav>
+  </div>
+  <div class="sidebar-foot">
+    <div class="sidebar-profile"><span class="profile-avatar" id="sidebarAvatar">P</span><div><strong id="sidebarName">Pet owner</strong><small>PAWCARE account</small></div></div>
+    <button class="side-link side-logout" id="logoutBtn"><i data-lucide="log-out"></i><span>Logout</span></button>
+  </div>
+</aside>
+<div class="sidebar-scrim" id="sidebarScrim"></div>
+<div class="app-main">
+<header class="topbar">
+  <button class="mobile-menu icon-btn" id="mobileMenu" aria-label="Open navigation"><i data-lucide="menu"></i></button>
+  <div class="topbar-context"><span class="eyebrow">VETERINARY COMMAND CENTER</span><strong>Every Paw. Every Record. Every Reminder.</strong></div>
+  <div class="topbar-actions">
+    <label class="global-search" aria-label="Search PAWCARE 360"><i data-lucide="search"></i><input id="globalSearch" type="search" placeholder="Search pets, owners, appointments..." autocomplete="off"><kbd>⌘ K</kbd></label>
+    <button class="icon-btn theme-toggle" id="themeToggle" aria-label="Change theme"><i data-lucide="sun-moon"></i></button>
+    <button id="notificationBtn" class="icon-btn notification-trigger" title="Notifications" aria-label="Notifications"><i data-lucide="bell"></i><span id="notificationCount" class="count"></span></button>
+    <div class="profile-menu"><button class="profile-trigger" id="profileTrigger"><span class="profile-avatar">P</span><span class="profile-trigger-copy"><strong id="topProfileName">Profile</strong><small>Account</small></span><i data-lucide="chevron-down"></i></button><div class="profile-dropdown" id="profileDropdown"><a href="/dashboard#settings"><i data-lucide="user-round"></i>Profile & settings</a><a href="/admin" class="admin-link"><i data-lucide="shield"></i>Admin console</a><button id="profileLogout"><i data-lucide="log-out"></i>Logout</button></div></div>
+  </div>
+</header>
+<main class="main-content">{% block content %}{% endblock %}</main>
+<footer class="app-footer"><div><strong>PAWCARE 360</strong><span>Every Paw. Every Record. Every Reminder.</span></div><small>Tracking support, not veterinary diagnosis.</small></footer>
+</div></div>
+<div id="toastStack" class="toast-stack"></div>
+<div id="notificationPanel" class="notification-panel" aria-live="polite"><div class="notification-head"><div><span class="eyebrow">CARE CENTER</span><h3>Notifications</h3></div><button class="icon-btn" onclick="closeNotifications()" aria-label="Close"><i data-lucide="x"></i></button></div><div class="notification-filters"><button class="active" data-notification-filter="all">All</button><button data-notification-filter="unread">Unread</button></div><div id="notificationList"><p class="muted">Sign in to see your care alerts.</p></div></div>
+{% block page_scripts %}{% endblock %}
+<script src="{{ url_for('static',filename='app.js') }}"></script>
+</body></html>
