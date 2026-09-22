@@ -9,3 +9,11 @@ html,body{background:var(--cream);color:var(--ink)}body:before{background:radial
 
 /* Responsive spacing and owner contact components */
 .owner-contact{display:grid;grid-template-columns:auto 1fr auto;gap:20px;align-items:center;margin:24px 0 34px;padding:22px 24px;border-radius:24px}.owner-contact-icon{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;background:#edf7f1;font-size:1.65rem}.owner-contact-copy h2{font-size:1.2rem;margin:4px 0 6px}.owner-contact-copy p{margin:0;color:var(--muted);line-height:1.65;font-size:.9rem;max-width:760px}.owner-phone-line{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:12px}.phone-status{font-weight:700;color:#48645a;font-size:.86rem}.phone-status.missing{color:#b56e54}.phone-help{padding:11px 13px;border-radius:13px;background:#edf7f1;color:#5f716a;font-size:.8rem;line-height:1.5}.phone-help strong{color:var(--teal)}.page-head{margin-bottom:26px}.grid{margin:18px 0 28px}.section-head{margin-top:6px;margin-bottom:14px}.card{padding:24px}.metric{min-height:128px}.pet-card{padding:22px}.row{min-height:58px}.actions{gap:10px}.btn{min-height:44px}.ghost{min-height:40px}@media(max-width:700px){.container{padding:24px 0 65px}.page-head{margin-bottom:20px}.page-head h1{font-size:clamp(2rem,9vw,3rem);line-height:1.08}.page-head p{font-size:.9rem}.actions{width:100%}.actions .btn{flex:1}.grid{gap:14px;margin:14px 0 22px}.card{padding:19px}.metric{min-height:105px}.owner-contact{grid-template-columns:auto 1fr;margin:18px 0 25px;padding:18px;gap:13px}.owner-contact>.btn{grid-column:1/-1;width:100%}.owner-contact-copy h2{font-size:1.05rem}.owner-contact-copy p{font-size:.82rem}.owner-phone-line{margin-top:9px}.section-head{gap:10px}.section-head h2{font-size:1.3rem}.pet-card{padding:18px}.notification-panel{right:12px;top:72px;width:calc(100vw - 24px);max-height:75vh;overflow:auto}.modal{padding:20px}.modal-grid{gap:10px}}
+
+/* Auth form spacing fix */
+.auth-card form{display:grid;gap:16px;margin-top:20px}
+.auth-card form label{gap:8px}
+.auth-card form .btn{margin-top:2px}
+.auth-card form .message{margin:0;min-height:20px}
+.auth-switch{margin-top:14px}
+@media(max-width:700px){.auth-card form{gap:15px;margin-top:18px}.auth-card form .btn{margin-top:3px}}
