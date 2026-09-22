@@ -41,19 +41,49 @@ def _repair_missing_columns(app):
             if column.name in existing:
                 continue
 
-            # Adding a NOT NULL column to a populated table without a server
-            # default is unsafe. Leave it for a real migration instead.
-            if not column.nullable and column.default is None and column.server_default is None:
+            # Existing Render databases may predate a required column. A plain
+            # ADD COLUMN without a database default fails when rows already exist.
+            # Only use explicit, known-safe defaults here; foreign keys and business
+            # data fields are intentionally left for real migrations.
+            safe_defaults = {
+                ("users", "role"): "'owner'",
+                ("users", "is_active"): "TRUE",
+                ("users", "created_at"): "CURRENT_TIMESTAMP",
+                ("pets", "created_at"): "CURRENT_TIMESTAMP",
+                ("medical_records", "record_date"): "CURRENT_DATE",
+                ("medical_records", "created_at"): "CURRENT_TIMESTAMP",
+                ("vaccinations", "given_date"): "CURRENT_DATE",
+                ("vaccinations", "created_at"): "CURRENT_TIMESTAMP",
+                ("medications", "start_date"): "CURRENT_DATE",
+                ("medications", "active"): "TRUE",
+                ("medications", "created_at"): "CURRENT_TIMESTAMP",
+                ("appointments", "appointment_date"): "CURRENT_DATE",
+                ("appointments", "status"): "'upcoming'",
+                ("appointments", "created_at"): "CURRENT_TIMESTAMP",
+                ("reminders", "reminder_type"): "'custom'",
+                ("reminders", "due_date"): "CURRENT_DATE",
+                ("reminders", "status"): "'upcoming'",
+                ("reminders", "created_at"): "CURRENT_TIMESTAMP",
+                ("notifications", "channel"): "'in_app'",
+                ("notifications", "status"): "'pending'",
+                ("notifications", "is_read"): "FALSE",
+                ("notifications", "created_at"): "CURRENT_TIMESTAMP",
+                ("weight_records", "recorded_on"): "CURRENT_DATE",
+                ("preventive_care", "performed_on"): "CURRENT_DATE",
+            }
+            default_sql = safe_defaults.get((table_name, column.name))
+            if not column.nullable and column.default is None and column.server_default is None and not default_sql:
                 app.logger.warning(
-                    "Schema repair skipped required column %s.%s; run a proper migration.",
+                    "Schema repair skipped required column %s.%s; run a real migration.",
                     table_name,
                     column.name,
                 )
                 continue
 
             column_type = column.type.compile(dialect=db.engine.dialect)
+            default_clause = f" DEFAULT {default_sql}" if default_sql else ""
             sql = db.text(
-                f'ALTER TABLE "{table_name}" ADD COLUMN "{column.name}" {column_type}'
+                f'ALTER TABLE "{table_name}" ADD COLUMN "{column.name}" {column_type}{default_clause}'
             )
             try:
                 db.session.execute(sql)
