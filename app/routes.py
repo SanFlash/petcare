@@ -7,6 +7,21 @@ from .models import User,Pet,MedicalRecord,Vaccination,Medication,Appointment,Re
 from .services.notifications import notify_owner,process_due_reminders,send_sms
 import re
 
+def normalize_phone(value):
+    phone=str(value or "").strip()
+    if not phone:
+        return None
+    phone=phone.replace(" ","").replace("-","").replace("(","").replace(")","")
+    if phone.startswith("00"):
+        phone="+"+phone[2:]
+    if phone.isdigit() and len(phone)==10:
+        phone="+91"+phone
+    elif phone.isdigit() and len(phone)==12 and phone.startswith("91"):
+        phone="+"+phone
+    if not re.fullmatch(r"\+[1-9]\d{7,14}",phone):
+        raise ValueError("Use a valid mobile number, e.g. +919876543210 or 9876543210.")
+    return phone
+
 web=Blueprint("web",__name__)
 api=Blueprint("api",__name__)
 
@@ -77,8 +92,8 @@ def pdate(v):
 def register():
     d=request.get_json(silent=True) or {}; name=str(d.get("full_name","")).strip(); email=str(d.get("email","")).strip().lower(); password=d.get("password","")
     if len(name)<2 or "@" not in email or len(password)<8:return err("VALIDATION_ERROR","Name, valid email and password of at least 8 characters are required.",422)
-    phone=str(d.get("phone","")).strip() or None
-    if phone and not re.fullmatch(r"\+?[1-9]\d{7,14}",phone):return err("VALIDATION_ERROR","Use a valid mobile number in international E.164 format, for example +919876543210.",422)
+    try: phone=normalize_phone(d.get("phone"))
+    except ValueError as e:return err("VALIDATION_ERROR",str(e),422)
     if User.query.filter_by(email=email).first():return err("CONFLICT","An account with that email already exists.",409)
     u=User(full_name=name,email=email,phone=phone,password_hash=generate_password_hash(password));db.session.add(u);db.session.commit()
     return ok({"id":u.id,"email":u.email},201)
@@ -109,8 +124,8 @@ def pet_create():
     if not str(d.get("name","")).strip() or not str(d.get("species","")).strip():return err("VALIDATION_ERROR","Pet name and species are required.",422)
     try:w=float(d["weight"]) if d.get("weight") not in (None,"") else None
     except:return err("VALIDATION_ERROR","Weight must be numeric.",422)
-    owner_phone=str(d.get("owner_phone",d.get("phone",""))).strip() or None
-    if owner_phone and not re.fullmatch(r"\+?[1-9]\d{7,14}",owner_phone):return err("VALIDATION_ERROR","Use a valid owner mobile number in international E.164 format, for example +919876543210.",422)
+    try: owner_phone=normalize_phone(d.get("owner_phone",d.get("phone")))
+    except ValueError as e:return err("VALIDATION_ERROR",str(e),422)
     if owner_phone:u.phone=owner_phone
     p=Pet(owner_id=u.id,name=str(d["name"]).strip(),species=str(d["species"]).strip(),breed=d.get("breed"),gender=d.get("gender"),date_of_birth=pdate(d.get("date_of_birth")),weight=w,weight_unit=d.get("weight_unit","kg"),color=d.get("color"),microchip_id=d.get("microchip_id"),allergies=d.get("allergies"),conditions=d.get("conditions"),diet=d.get("diet"),behavior_notes=d.get("behavior_notes"),emergency_notes=d.get("emergency_notes"))
     db.session.add(p);db.session.commit();return ok({**pd(p),"owner_phone":u.phone},201)
@@ -217,8 +232,8 @@ def profile():
     d=request.get_json(silent=True) or {}
     if "full_name" in d and len(str(d["full_name"]).strip())>=2:u.full_name=str(d["full_name"]).strip()
     if "phone" in d:
-        phone=str(d["phone"]).strip() or None
-        if phone and not re.fullmatch(r"\+?[1-9]\d{7,14}",phone): return err("VALIDATION_ERROR","Use a valid mobile number, preferably in international E.164 format such as +919876543210.",422)
+        try: phone=normalize_phone(d["phone"])
+        except ValueError as e:return err("VALIDATION_ERROR",str(e),422)
         u.phone=phone
     db.session.commit();return ok({"id":u.id,"full_name":u.full_name,"email":u.email,"phone":u.phone,"role":u.role})
 
