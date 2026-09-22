@@ -136,8 +136,7 @@ function initAuthForms(){
 function initNotificationFilters(){document.querySelectorAll('[data-notification-filter]').forEach(b=>b.addEventListener('click',async()=>{document.querySelectorAll('[data-notification-filter]').forEach(x=>x.classList.remove('active'));b.classList.add('active');const r=await api('/api/notifications');renderNotifications(r.data||[],b.dataset.notificationFilter)}))}
 document.addEventListener('DOMContentLoaded',()=>{
  document.body.classList.add('app-ready');
- icons();initAuthForms();initTheme();initSidebar();initProfileMenu();initSearch();animateCounters();initNotificationFilters();initCalendarView();syncNav();friendlyAuthNavigation();
- document.body.addEventListener('click',e=>{if(e.target.closest('#notificationBtn'))openNotifications()});
+ icons();initAuthForms();initTheme();initSidebar();initProfileMenu();initSearch();animateCounters();initNotificationFilters();initCalendarView();syncNav();friendlyAuthNavigation(); document.body.addEventListener('click',e=>{if(e.target.closest('#notificationBtn'))openNotifications()});
  qs('#logoutBtn')?.addEventListener('click',logout);
   document.addEventListener('click',e=>{
    const link=e.target.closest('a[href]');
