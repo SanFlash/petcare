@@ -1,5 +1,5 @@
 from flask import Blueprint,jsonify,request,render_template
-from flask_jwt_extended import create_access_token,set_access_cookies,unset_jwt_cookies,jwt_required,get_jwt_identity,get_jwt
+from flask_jwt_extended import create_access_token,set_access_cookies,unset_jwt_cookies,jwt_required,verify_jwt_in_request,get_jwt_identity,get_jwt
 from werkzeug.security import check_password_hash,generate_password_hash
 from datetime import datetime,date
 from .extensions import db,limiter
@@ -19,9 +19,11 @@ def login_page(): return render_template("login.html")
 def register_page(): return render_template("register.html")
 
 @web.get("/dashboard")
-@jwt_required(locations=["cookies"])
+@jwt_required(optional=True,locations=["cookies"])
 def dashboard():
-    uid=int(get_jwt_identity()); user=db.session.get(User,uid)
+    identity=get_jwt_identity()
+    if identity is None: return render_template("login.html", login_redirect="/dashboard")
+    uid=int(identity); user=db.session.get(User,uid)
     process_due_reminders(owner_id=uid)
     pets=Pet.query.filter_by(owner_id=uid).order_by(Pet.name).all()
     reminders=Reminder.query.join(Pet).filter(Pet.owner_id==uid).order_by(Reminder.due_date.asc()).limit(20).all()
@@ -29,9 +31,11 @@ def dashboard():
     return render_template("dashboard.html",user=user,pets=pets,reminders=reminders,unread=unread,today=date.today())
 
 @web.get("/pets/<int:pet_id>")
-@jwt_required(locations=["cookies"])
+@jwt_required(optional=True,locations=["cookies"])
 def pet_detail(pet_id):
-    uid=int(get_jwt_identity()); pet=Pet.query.filter_by(id=pet_id,owner_id=uid).first()
+    identity=get_jwt_identity()
+    if identity is None: return render_template("login.html", login_redirect=f"/pets/{pet_id}")
+    uid=int(identity); pet=Pet.query.filter_by(id=pet_id,owner_id=uid).first()
     if not pet:return ("Pet not found",404)
     return render_template("pet_detail.html",pet=pet,
         medical_records=MedicalRecord.query.filter_by(pet_id=pet.id).order_by(MedicalRecord.record_date.desc()).all(),
@@ -42,9 +46,11 @@ def pet_detail(pet_id):
         today=date.today())
 
 @web.get("/admin")
-@jwt_required(locations=["cookies"])
+@jwt_required(optional=True,locations=["cookies"])
 def admin_page():
-    if get_jwt().get("role")!="admin":return ("Forbidden",403)
+    identity=get_jwt_identity()
+    if identity is None: return render_template("login.html", login_redirect="/admin")
+    if get_jwt().get("role")!="admin": return render_template("admin.html", access_denied=True, users=[], pets=[], reminders=[], notifications=[]),403
     return render_template("admin.html",
         users=User.query.order_by(User.created_at.desc()).all(),
         pets=Pet.query.order_by(Pet.created_at.desc()).all(),
@@ -192,7 +198,7 @@ def notification_read(nid):
 @jwt_required(locations=["cookies"])
 def profile():
     u=user()
-    if request.method=="GET":return ok({"id":u.id,"full_name":u.full_name,"email":u.email,"phone":u.phone})
+    if request.method=="GET":return ok({"id":u.id,"full_name":u.full_name,"email":u.email,"phone":u.phone,"role":u.role})
     d=request.get_json(silent=True) or {}
     if "full_name" in d and len(str(d["full_name"]).strip())>=2:u.full_name=str(d["full_name"]).strip()
     if "phone" in d:u.phone=str(d["phone"]).strip() or None
