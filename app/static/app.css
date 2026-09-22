@@ -17,3 +17,14 @@ html,body{background:var(--cream);color:var(--ink)}body:before{background:radial
 .auth-card form .message{margin:0;min-height:20px}
 .auth-switch{margin-top:14px}
 @media(max-width:700px){.auth-card form{gap:15px;margin-top:18px}.auth-card form .btn{margin-top:3px}}
+
+/* Compact, scrollable modal experience */
+.modal-backdrop{overflow-y:auto;overflow-x:hidden;align-items:flex-start;padding:clamp(16px,4vh,34px) 16px}
+.modal{width:min(520px,100%);max-height:calc(100vh - 32px);overflow-y:auto;overflow-x:hidden;padding:22px;border-radius:24px;margin:auto;scrollbar-width:thin}
+.modal form{gap:11px}
+.modal-grid{gap:10px}
+.modal label{gap:6px}
+.modal input,.modal select,.modal textarea{padding:10px 12px;min-height:42px}
+.modal textarea{min-height:72px;resize:vertical}
+.modal .btn{margin-top:3px}
+@media(max-width:700px){.modal-backdrop{padding:10px}.modal{width:100%;max-height:calc(100vh - 20px);padding:18px;border-radius:20px}.modal-grid{grid-template-columns:1fr;gap:10px}.modal input,.modal select,.modal textarea{min-height:40px}.modal textarea{min-height:64px}}
