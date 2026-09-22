@@ -122,3 +122,311 @@ html[data-theme="dark"] input[type="date"],html[data-theme="dark"] input[type="t
  .modal-backdrop{align-items:flex-start;min-height:100dvh}
  .modal{width:100%;margin:auto 0;max-height:calc(100dvh - 20px)}
 }
+
+
+/* Pet profile layout refinement */
+.pet-profile-head{
+  width:100%;
+  padding:8px 0 22px;
+  margin-bottom:10px;
+  align-items:center;
+}
+.pet-profile-identity{
+  min-width:0;
+  flex:1;
+}
+.pet-profile-identity>div:last-child{
+  min-width:0;
+}
+.pet-profile-identity h1{
+  overflow-wrap:anywhere;
+}
+.pet-profile-head .head-actions{
+  justify-content:flex-end;
+  flex-shrink:0;
+}
+.profile-tabs{
+  margin-top:0;
+  margin-bottom:18px;
+  min-height:48px;
+  align-items:center;
+  scrollbar-width:thin;
+}
+.profile-tabs a{
+  flex:0 0 auto;
+  min-height:34px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+.profile-tabs a.active{
+  background:var(--primary-light);
+  color:var(--primary);
+  box-shadow:inset 0 -2px var(--primary);
+}
+.profile-grid{
+  margin-bottom:18px;
+}
+#timeline{
+  margin-bottom:18px;
+}
+#timeline .health-timeline{
+  min-height:92px;
+}
+#timeline + .split-grid{
+  margin-bottom:18px;
+}
+#appointments{
+  margin-bottom:18px;
+}
+#records{
+  margin-bottom:4px;
+}
+.profile-grid .section-card,
+#timeline,
+#appointments,
+#records,
+#vaccinations,
+#medications{
+  min-width:0;
+}
+.detail-grid>div{
+  min-width:0;
+}
+.detail-grid strong,
+.health-flag span,
+.timeline-item strong,
+.timeline-item p,
+.data-row span,
+.appointment-row span,
+.record-row p{
+  overflow-wrap:anywhere;
+}
+.health-flag{
+  min-width:0;
+}
+.health-flag>div{
+  min-width:0;
+}
+.timeline-item>div:last-child{
+  min-width:0;
+  flex:1;
+}
+.data-row>div:nth-child(2),
+.appointment-row>div:nth-child(2),
+.record-row>div:nth-child(2){
+  min-width:0;
+}
+
+/* Tablet profile spacing */
+@media(max-width:1180px){
+  .pet-profile-head{
+    gap:18px;
+  }
+  .profile-tabs{
+    margin-left:-22px;
+    margin-right:-22px;
+    padding-left:22px;
+    padding-right:22px;
+  }
+  .profile-grid,
+  #timeline,
+  #appointments,
+  #records,
+  #vaccinations,
+  #medications{
+    border-radius:16px;
+  }
+}
+
+/* Compact/tablet layout */
+@media(max-width:900px){
+  .pet-profile-head{
+    align-items:flex-start;
+    flex-wrap:wrap;
+    padding-top:4px;
+    padding-bottom:18px;
+  }
+  .pet-profile-identity{
+    width:100%;
+  }
+  .pet-profile-head .head-actions{
+    width:100%;
+    justify-content:flex-start;
+  }
+  .pet-profile-head .head-actions .btn{
+    flex:1 1 150px;
+  }
+  .profile-tabs{
+    margin-bottom:16px;
+  }
+  .profile-grid{
+    grid-template-columns:1fr;
+    gap:14px;
+  }
+  .split-grid{
+    gap:14px;
+  }
+  #timeline,
+  #appointments,
+  #records,
+  #vaccinations,
+  #medications{
+    margin-bottom:14px;
+  }
+}
+
+/* Phone layout */
+@media(max-width:640px){
+  .pet-profile-head{
+    padding:2px 0 14px;
+    margin-bottom:6px;
+  }
+  .pet-profile-identity{
+    gap:12px;
+  }
+  .profile-pet-image{
+    width:64px;
+    height:64px;
+    border-radius:16px;
+  }
+  .profile-pet-image svg{
+    width:28px;
+  }
+  .pet-profile-identity .eyebrow{
+    font-size:8px;
+    letter-spacing:.11em;
+  }
+  .pet-profile-identity h1{
+    font-size:clamp(1.65rem,8vw,2.25rem);
+    margin:.2rem 0 .35rem;
+  }
+  .pet-profile-identity p{
+    font-size:11px;
+  }
+  .profile-badges{
+    margin-top:6px;
+    flex-wrap:wrap;
+  }
+  .pet-profile-head .head-actions{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:7px;
+    margin-top:10px;
+  }
+  .pet-profile-head .head-actions .btn{
+    width:100%;
+    flex:initial;
+  }
+  .profile-tabs{
+    top:64px;
+    min-height:46px;
+    gap:4px;
+    margin-left:-14px;
+    margin-right:-14px;
+    margin-bottom:12px;
+    padding:6px 14px;
+    border-radius:0;
+  }
+  .profile-tabs a{
+    min-height:32px;
+    padding:7px 10px;
+    font-size:10px;
+  }
+  .profile-grid,
+  #timeline,
+  #appointments,
+  #records,
+  #vaccinations,
+  #medications{
+    margin-bottom:12px;
+  }
+  .section-card{
+    padding:15px;
+  }
+  .section-title{
+    align-items:flex-start;
+    margin-bottom:13px;
+  }
+  .section-title .btn{
+    flex-shrink:0;
+  }
+  .detail-grid{
+    grid-template-columns:1fr 1fr;
+  }
+  .detail-grid>div{
+    padding:11px;
+  }
+  .detail-grid small{
+    font-size:8px;
+  }
+  .detail-grid strong{
+    font-size:10px;
+  }
+  .health-summary{
+    gap:7px;
+  }
+  .health-flag{
+    padding:9px;
+  }
+  .health-flag strong{
+    font-size:10px;
+  }
+  .health-flag span{
+    font-size:9px;
+  }
+  #timeline .health-timeline{
+    min-height:82px;
+    padding-left:19px;
+  }
+  .timeline-item{
+    padding:11px 0;
+  }
+  .timeline-item>div:last-child{
+    padding-left:17px;
+  }
+  .timeline-item strong{
+    font-size:10px;
+  }
+  .timeline-item span,
+  .timeline-item p{
+    font-size:9px;
+  }
+  .empty-state.compact{
+    padding:24px 8px;
+  }
+  .data-row,
+  .appointment-row,
+  .record-row{
+    flex-wrap:wrap;
+    gap:9px;
+    padding:11px 0;
+  }
+  .data-row>div:nth-child(2),
+  .appointment-row>div:nth-child(2),
+  .record-row>div:nth-child(2){
+    flex:1 1 calc(100% - 48px);
+  }
+  .data-row>.badge,
+  .appointment-row>.badge{
+    margin-left:auto;
+  }
+  .appointment-row>.badge{
+    flex-basis:auto;
+  }
+}
+
+/* Very small phones */
+@media(max-width:390px){
+  .profile-tabs a{
+    padding-left:8px;
+    padding-right:8px;
+    font-size:9px;
+  }
+  .detail-grid{
+    grid-template-columns:1fr;
+  }
+  .pet-profile-head .head-actions{
+    grid-template-columns:1fr;
+  }
+}
