@@ -88,7 +88,110 @@ async function addMedicalRecord(pid){modal('Add health record','<form><div class
 async function completeReminder(id){try{await api('/api/reminders/'+id+'/complete',{method:'POST'});toast('Reminder completed','The care queue is updated.');setTimeout(()=>location.reload(),500)}catch(e){toast('Could not complete',e.message,'error')}}
 async function sendTestSms(){try{const r=await api('/api/notifications/test-sms',{method:'POST'});toast('Test SMS sent','Check '+(r.data?.phone||'the saved number')+' for the PAWCARE 360 test message.')}catch(e){toast('SMS test failed',e.message,'error')}}
 function initTheme(){const root=document.documentElement;const saved=localStorage.getItem('pawcare-theme')||'system';const system=matchMedia('(prefers-color-scheme:dark)').matches;root.dataset.theme=saved==='system'?(system?'dark':'light'):saved;const b=qs('#themeToggle');b?.addEventListener('click',()=>{const saved=localStorage.getItem('pawcare-theme')||'system';const next=saved==='light'?'dark':saved==='dark'?'system':'light';const system=matchMedia('(prefers-color-scheme:dark)').matches;root.dataset.theme=next==='system'?(system?'dark':'light'):next;localStorage.setItem('pawcare-theme',next);toast('Theme changed',next==='system'?'Following system theme.':next==='dark'?'Dark theme enabled.':'Light theme enabled.');});matchMedia('(prefers-color-scheme:dark)').addEventListener('change',e=>{if((localStorage.getItem('pawcare-theme')||'system')==='system')root.dataset.theme=e.matches?'dark':'light'})}
-function initSidebar(){const side=qs('#sidebar'),scrim=qs('#sidebarScrim');const open=()=>{side?.classList.add('open');scrim?.classList.add('open')},close=()=>{side?.classList.remove('open');scrim?.classList.remove('open')};qs('#mobileMenu')?.addEventListener('click',open);qs('#sidebarClose')?.addEventListener('click',close);scrim?.addEventListener('click',close);document.querySelectorAll('.side-link').forEach(a=>a.addEventListener('click',()=>{if(innerWidth<901)close()}));const path=location.pathname+location.hash;document.querySelectorAll('.side-link').forEach(a=>{if(a.getAttribute('href')===path||((path==='/dashboard'||path.startsWith('/dashboard#'))&&a.getAttribute('href')==='/dashboard'))a.classList.add('active')})}
+function initSidebar(){
+ const side=qs('#sidebar'),scrim=qs('#sidebarScrim');
+ const links=[...document.querySelectorAll('.side-link')];
+ const open=()=>{side?.classList.add('open');scrim?.classList.add('open')};
+ const close=()=>{side?.classList.remove('open');scrim?.classList.remove('open')};
+ qs('#mobileMenu')?.addEventListener('click',open);
+ qs('#sidebarClose')?.addEventListener('click',close);
+ scrim?.addEventListener('click',close);
+
+ const setActive=activeLink=>{
+   links.forEach(a=>a.classList.toggle('active',a===activeLink));
+ };
+
+ const dashboardLink=href=>{
+   try{
+     const u=new URL(href,location.origin);
+     return u.pathname==='/dashboard'&&u.hash;
+   }catch{return false}
+ };
+
+ const activateFromLocation=()=>{
+   const currentPath=location.pathname;
+   const currentHash=location.hash||'';
+   let active=null;
+
+   if(currentPath==='/dashboard'){
+     if(currentHash){
+       active=links.find(a=>{
+         const u=new URL(a.getAttribute('href')||'',location.origin);
+         return u.pathname==='/dashboard'&&u.hash===currentHash;
+       });
+     }
+     active=active||links.find(a=>a.getAttribute('href')==='/dashboard');
+   }else{
+     active=links.find(a=>{
+       const u=new URL(a.getAttribute('href')||'',location.origin);
+       return u.pathname===currentPath&&u.hash===currentHash;
+     });
+   }
+   setActive(active||null);
+ };
+
+ links.forEach(a=>{
+   a.addEventListener('click',e=>{
+     const href=a.getAttribute('href')||'';
+     if(innerWidth<901)close();
+
+     if(location.pathname==='/dashboard'&&dashboardLink(href)){
+       e.preventDefault();
+       const u=new URL(href,location.origin);
+       const target=document.querySelector(u.hash);
+       setActive(a);
+       history.pushState(null,'',u.pathname+u.hash);
+       if(target){
+         const offset=window.innerWidth<=640?78:92;
+         const top=target.getBoundingClientRect().top+scrollY-offset;
+         window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+       }
+       return;
+     }
+
+     if(location.pathname==='/dashboard'&&href==='/dashboard'){
+       e.preventDefault();
+       setActive(a);
+       history.pushState(null,'','/dashboard');
+       window.scrollTo({top:0,behavior:'smooth'});
+     }
+   });
+ });
+
+ activateFromLocation();
+
+ if(location.pathname==='/dashboard'&&'IntersectionObserver' in window){
+   const sectionLinks=new Map();
+   links.forEach(a=>{
+     const href=a.getAttribute('href')||'';
+     const hash=dashboardLink(href);
+     if(hash){
+       const target=document.querySelector(hash);
+       if(target&&!sectionLinks.has(target.id))sectionLinks.set(target.id,a);
+     }
+   });
+
+   const observer=new IntersectionObserver(entries=>{
+     const visible=entries
+       .filter(entry=>entry.isIntersecting)
+       .sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];
+     if(!visible)return;
+     const active=sectionLinks.get(visible.target.id);
+     if(!active)return;
+     setActive(active);
+     const nextHash='#'+visible.target.id;
+     if(location.hash!==nextHash)history.replaceState(null,'',nextHash);
+   },{rootMargin:'-18% 0px -62% 0px',threshold:[0,.2,.5,.8]});
+
+   sectionLinks.forEach((_,id)=>{
+     const target=document.getElementById(id);
+     if(target)observer.observe(target);
+   });
+ }
+
+ window.addEventListener('hashchange',activateFromLocation);
+ window.addEventListener('popstate',activateFromLocation);
+}
 function initProfileMenu(){const t=qs('#profileTrigger'),d=qs('#profileDropdown');t?.addEventListener('click',e=>{e.stopPropagation();d?.classList.toggle('open')});document.addEventListener('click',()=>d?.classList.remove('open'));qs('#profileLogout')?.addEventListener('click',async()=>{await logout()})}
 async function logout(){try{await api('/api/auth/logout',{method:'POST'})}finally{location.href='/'}}
 function animateCounters(){document.querySelectorAll('[data-counter]').forEach(el=>{const target=Number(el.dataset.counter||0);const start=performance.now(),duration=650;function tick(now){const p=Math.min(1,(now-start)/duration),ease=1-Math.pow(1-p,3);el.textContent=Math.round(target*ease);if(p<1)requestAnimationFrame(tick)}requestAnimationFrame(tick)})}
