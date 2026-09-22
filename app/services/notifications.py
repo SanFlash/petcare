@@ -1,7 +1,7 @@
 import os
 from datetime import date,timedelta
 from ..extensions import db
-from ..models import Notification,Reminder,Pet,User
+from ..models import Notification,Reminder,Pet
 
 def _sms(to, body):
     sid=os.getenv("TWILIO_ACCOUNT_SID"); token=os.getenv("TWILIO_AUTH_TOKEN"); sender=os.getenv("TWILIO_FROM_NUMBER")
@@ -25,10 +25,10 @@ def process_due_reminders(owner_id=None):
     q=Reminder.query.join(Pet).filter(Reminder.status.notin_(["completed","cancelled"]),Reminder.due_date<=tomorrow)
     if owner_id:q=q.filter(Pet.owner_id==owner_id)
     processed=0
-    for r in q.all():
+    for r in q.order_by(Reminder.due_date.asc()).all():
         owner=r.pet.owner
-        exists=Notification.query.filter_by(user_id=owner.id,channel="sms",title=f"Reminder: {r.title}").first()
-        if exists: continue
+        successful_sms=Notification.query.filter_by(user_id=owner.id,channel="sms",title=f"Reminder: {r.title}",status="sent").first()
+        if successful_sms: continue
         when="today" if r.due_date==today else "tomorrow" if r.due_date==tomorrow else r.due_date.isoformat()
         notify_owner(owner,f"Reminder: {r.title}",f"{r.pet.name} has a {r.reminder_type} reminder due {when}.",event="due_reminder")
         processed+=1
