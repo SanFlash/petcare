@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  icons();initAuthForms();initTheme();initSidebar();initProfileMenu();initSearch();animateCounters();initNotificationFilters();initCalendarView();syncNav();friendlyAuthNavigation();
  document.body.addEventListener('click',e=>{if(e.target.closest('#notificationBtn'))openNotifications()});
  qs('#logoutBtn')?.addEventListener('click',logout);
- document.addEventListener('click',e=>{
+  document.addEventListener('click',e=>{
    const link=e.target.closest('a[href]');
    if(!link||e.defaultPrevented)return;
    const href=link.getAttribute('href')||'';
