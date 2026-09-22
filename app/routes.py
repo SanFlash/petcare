@@ -1,4 +1,4 @@
-from flask import Blueprint,jsonify,request,render_template
+from flask import Blueprint,jsonify,request,render_template,current_app
 from flask_jwt_extended import create_access_token,set_access_cookies,unset_jwt_cookies,jwt_required,verify_jwt_in_request,get_jwt_identity,get_jwt
 from werkzeug.security import check_password_hash,generate_password_hash
 from datetime import datetime,date,time,timedelta
@@ -55,7 +55,7 @@ def dashboard():
         process_due_reminders(owner_id=uid)
     except Exception:
         db.session.rollback()
-        web.logger.exception("Dashboard reminder processing failed for user %s", uid)
+        current_app.logger.exception("Dashboard reminder processing failed for user %s", uid)
 
     today=date.today()
 
