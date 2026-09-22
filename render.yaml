@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: petcare-platform
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn run:app
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: petcare
+      - key: DEMO_ADMIN_EMAIL
+        value: admin@petcare.local
+      - key: DEMO_ADMIN_PASSWORD
+        value: PetCare@12345
+      - key: APP_BASE_URL
+        sync: false
