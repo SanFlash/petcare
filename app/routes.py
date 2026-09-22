@@ -204,6 +204,18 @@ def notification_read(nid):
     if not n:return err("NOT_FOUND","Notification not found.",404)
     n.is_read=True;db.session.commit();return ok({"id":n.id,"is_read":True})
 
+@api.route("/profile",methods=["GET","PATCH"])
+@jwt_required(locations=["cookies"])
+def profile():
+    u=user()
+    if request.method=="GET":
+        return ok({"id":u.id,"full_name":u.full_name,"email":u.email,"phone":u.phone})
+    d=request.get_json(silent=True) or {}
+    if "full_name" in d and len(str(d["full_name"]).strip())>=2:u.full_name=str(d["full_name"]).strip()
+    if "phone" in d:u.phone=str(d["phone"]).strip() or None
+    db.session.commit()
+    return ok({"id":u.id,"full_name":u.full_name,"email":u.email,"phone":u.phone})
+
 @api.get("/notifications/preferences")
 @jwt_required(locations=["cookies"])
 def notification_preferences():
