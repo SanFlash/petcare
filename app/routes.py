@@ -7,7 +7,10 @@ from sqlalchemy import or_
 from .extensions import db,limiter
 from .models import User,Pet,MedicalRecord,Vaccination,Medication,Appointment,Reminder,Notification
 from .services.notifications import notify_owner,process_due_reminders,send_sms
-import re
+import re,io,base64,os
+from uuid import uuid4
+from PIL import Image,ImageOps
+from supabase import create_client
 
 def normalize_phone(value):
     phone=str(value or "").strip()
@@ -231,6 +234,61 @@ def pet_create():
 @api.get("/pets")
 @jwt_required(locations=["cookies"])
 def pets_list():return ok([pd(p) for p in Pet.query.filter_by(owner_id=user().id).order_by(Pet.name).all()])
+
+
+@api.post("/pets/<int:pid>/photo")
+@limiter.limit("20 per minute")
+@jwt_required(locations=["cookies"])
+def pet_photo_upload(pid):
+    u,p=owned(pid)
+    if not p:
+        return err("NOT_FOUND","Pet not found.",404)
+    uploaded=request.files.get("photo")
+    if not uploaded or not uploaded.filename:
+        return err("VALIDATION_ERROR","Choose a pet image first.",422)
+    allowed={"image/jpeg","image/png","image/webp"}
+    if uploaded.mimetype not in allowed:
+        return err("INVALID_IMAGE","Use JPG, PNG or WebP.",422)
+    raw=uploaded.read()
+    if not raw or len(raw)>5*1024*1024:
+        return err("INVALID_IMAGE","Pet images must be smaller than 5 MB.",422)
+    try:
+        source=Image.open(io.BytesIO(raw))
+        source.verify()
+        source=Image.open(io.BytesIO(raw))
+        source=ImageOps.exif_transpose(source)
+        source.thumbnail((1400,1400),Image.Resampling.LANCZOS)
+        if source.mode not in ("RGB","RGBA"):
+            source=source.convert("RGB")
+        if source.mode=="RGBA":
+            background=Image.new("RGB",source.size,"white")
+            background.paste(source,mask=source.getchannel("A"))
+            source=background
+        out=io.BytesIO()
+        source.save(out,format="JPEG",quality=84,optimize=True)
+        image_bytes=out.getvalue()
+    except Exception:
+        return err("INVALID_IMAGE","The uploaded file is not a valid image.",422)
+
+    photo_url=None
+    supabase_url=current_app.config.get("SUPABASE_URL") or os.getenv("SUPABASE_URL")
+    supabase_key=current_app.config.get("SUPABASE_KEY") or os.getenv("SUPABASE_KEY")
+    bucket=current_app.config.get("SUPABASE_STORAGE_BUCKET") or os.getenv("SUPABASE_STORAGE_BUCKET","petcare")
+    if supabase_url and supabase_key:
+        try:
+            client=create_client(supabase_url,supabase_key)
+            path=f"pets/{u.id}/{p.id}/{uuid4().hex}.jpg"
+            client.storage.from_(bucket).upload(path,image_bytes,{"content-type":"image/jpeg","cache-control":"31536000","upsert":"true"})
+            photo_url=client.storage.from_(bucket).get_public_url(path)
+        except Exception:
+            current_app.logger.exception("Supabase pet image upload failed for pet %s",p.id)
+
+    if not photo_url:
+        encoded=base64.b64encode(image_bytes).decode("ascii")
+        photo_url=f"data:image/jpeg;base64,{encoded}"
+    p.photo_url=photo_url
+    db.session.commit()
+    return ok({"pet_id":p.id,"photo_url":p.photo_url},200)
 
 @api.post("/pets/<int:pid>/vaccinations")
 @jwt_required(locations=["cookies"])
