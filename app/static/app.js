@@ -51,7 +51,7 @@ function modal(title,html,onSubmit){
    e.preventDefault();
    const submit=form.querySelector('button[type="submit"],button.btn');
    if(submit){submit.disabled=true;submit.dataset.old=submit.innerHTML;submit.innerHTML='<i data-lucide="loader-circle"></i> Saving...';icons()}
-   try{await onSubmit(new FormData(form));close();}
+   try{const payload=new FormData(form);await onSubmit(form.enctype==='multipart/form-data'?payload:Object.fromEntries(payload));close();}
    catch(x){if(submit){submit.disabled=false;submit.innerHTML=submit.dataset.old||'Save';icons()}toast('Could not save',x.message,'error')}
  };
  wrap.querySelectorAll('input,select,textarea').forEach((el,i)=>{if(i===0)setTimeout(()=>el.focus(),50)});
