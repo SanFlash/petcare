@@ -1,3 +1,17 @@
+
+/* Cinematic PAWCARE 360 startup loader */
+function initPawcareLoader(){
+ const loader=document.getElementById('pawcareLoader'); if(!loader)return;
+ const reduce=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+ const minTime=reduce?450:1850;
+ const started=performance.now();
+ const finish=()=>{
+   const wait=Math.max(0,minTime-(performance.now()-started));
+   setTimeout(()=>{loader.classList.add('is-leaving');setTimeout(()=>{loader.remove();document.body.classList.remove('pawcare-loading')},650)},wait);
+ };
+ document.body.classList.add('pawcare-loading');
+ if(document.readyState==='complete') finish(); else window.addEventListener('load',finish,{once:true});
+}
 function cookieValue(name){
  const prefix=name+'=';
  return document.cookie.split(';').map(x=>x.trim()).find(x=>x.startsWith(prefix))?.slice(prefix.length)||'';
@@ -377,3 +391,5 @@ function initTableMotion(){
  });
 }
 initSectionScrollSpy();initSmoothAnchors();initScrollTop();initTableMotion();
+
+initPawcareLoader();
