@@ -139,6 +139,7 @@ function initSidebar(){
 
  links.forEach(a=>{
    a.addEventListener('click',e=>{
+     if(e.defaultPrevented)return;
      const href=a.getAttribute('href')||'';
      const u=linkTarget(href);
      if(innerWidth<901)close();
