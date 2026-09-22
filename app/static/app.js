@@ -1,16 +1,48 @@
 
-/* Cinematic PAWCARE 360 startup loader */
+/* Cinematic PAWCARE 360 startup loader
+ * First landing-page opening per browser tab:
+ * - keep the cinematic loader visible for at least 7 seconds
+ * - wait for the page's load event before releasing it
+ * - then fade into the landing page
+ * - skip the startup loader on internal pages and later navigation in the same tab
+ */
 function initPawcareLoader(){
  const loader=document.getElementById('pawcareLoader'); if(!loader)return;
+ const isLandingPage=location.pathname==='/'||location.pathname==='';
+ const alreadyShown=sessionStorage.getItem('pawcare-loader-shown')==='1';
+
+ if(!isLandingPage||alreadyShown){
+   loader.remove();
+   document.body.classList.remove('pawcare-loading');
+   return;
+ }
+
+ sessionStorage.setItem('pawcare-loader-shown','1');
+
  const reduce=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
- const minTime=reduce?700:2600;
+ const minTime=7000;
  const started=performance.now();
+ let finished=false;
+
  const finish=()=>{
+   if(finished)return;
+   finished=true;
    const wait=Math.max(0,minTime-(performance.now()-started));
-   setTimeout(()=>{loader.classList.add('is-leaving');setTimeout(()=>{loader.remove();document.body.classList.remove('pawcare-loading')},650)},wait);
+   setTimeout(()=>{
+     loader.classList.add('is-leaving');
+     setTimeout(()=>{
+       loader.remove();
+       document.body.classList.remove('pawcare-loading');
+     },650);
+   },wait);
  };
+
  document.body.classList.add('pawcare-loading');
- if(document.readyState==='complete') finish(); else window.addEventListener('load',finish,{once:true});
+
+ // Reduced-motion users still receive the requested minimum 7-second
+ // startup experience; only the decorative CSS motion is suppressed.
+ if(document.readyState==='complete') finish();
+ else window.addEventListener('load',finish,{once:true});
 }
 function cookieValue(name){
  const prefix=name+'=';
