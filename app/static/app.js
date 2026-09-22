@@ -39,5 +39,47 @@ function initSearch(){const input=qs('#globalSearch');if(!input)return;let timer
 async function syncNav(){try{const r=await api('/api/profile');const name=r.data?.full_name||'Pet owner';const initial=name.charAt(0).toUpperCase();document.querySelectorAll('#sidebarName,#topProfileName').forEach(e=>e.textContent=name);document.querySelectorAll('.profile-avatar').forEach(e=>e.textContent=initial);document.querySelectorAll('.admin-link').forEach(e=>e.style.display=r.data?.role==='admin'?'flex':'none');qs('#logoutBtn')?.style.setProperty('display','flex')}catch(e){document.querySelectorAll('.admin-link').forEach(e=>e.style.display='none')}}
 function friendlyAuthNavigation(){document.querySelectorAll('a[href="/dashboard"],a[href^="/pets/"],a[href="/admin"],a[href^="/dashboard#"]').forEach(a=>a.addEventListener('click',async e=>{try{await api('/api/profile')}catch(err){e.preventDefault();location.href='/login?next='+encodeURIComponent(a.getAttribute('href'))}}))}
 function initCalendarView(){const buttons=document.querySelectorAll('[data-calendar-view]'),days=document.querySelectorAll('.calendar-day');if(!buttons.length)return;const today=new Date();const iso=d=>d.toISOString().slice(0,10);buttons.forEach(b=>b.addEventListener('click',()=>{buttons.forEach(x=>x.classList.remove('active'));b.classList.add('active');const mode=b.dataset.calendarView;days.forEach(cell=>{const d=new Date(cell.dataset.day+'T00:00:00');let show=true;if(mode==='day')show=iso(d)===iso(today);if(mode==='week'){const monday=new Date(today);const offset=(today.getDay()+6)%7;monday.setDate(today.getDate()-offset);const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);show=d>=monday&&d<=sunday}cell.style.display=show?'block':'none'})}))}
+function initAuthForms(){
+ const login=qs('#loginForm');
+ if(login) login.addEventListener('submit',async e=>{
+   e.preventDefault();
+   const btn=login.querySelector('button[type="submit"]');
+   const message=login.querySelector('#formMessage');
+   const data=Object.fromEntries(new FormData(login));
+   const redirect=data.login_redirect||new URLSearchParams(location.search).get('next')||'/dashboard';
+   if(btn){btn.disabled=true;btn.dataset.old=btn.innerHTML;btn.innerHTML='<i data-lucide="loader-circle"></i> Signing in...';icons()}
+   if(message){message.textContent='';message.className='message'}
+   try{
+     const r=await api('/api/auth/login',{method:'POST',body:JSON.stringify({email:data.email,password:data.password})});
+     if(message){message.textContent='Login successful. Redirecting...';message.className='message success'}
+     toast('Welcome back',r.data?.user?.name||'Signed in successfully.');
+     window.location.assign(redirect.startsWith('/')?redirect:'/dashboard');
+   }catch(err){
+     if(message){message.textContent=err.message;message.className='message error'}
+     toast('Sign in failed',err.message,'error');
+     if(btn){btn.disabled=false;btn.innerHTML=btn.dataset.old||'Sign in';icons()}
+   }
+ });
+ const register=qs('#registerForm');
+ if(register) register.addEventListener('submit',async e=>{
+   e.preventDefault();
+   const btn=register.querySelector('button[type="submit"],button.btn');
+   const message=register.querySelector('#formMessage');
+   const data=Object.fromEntries(new FormData(register));
+   if(btn){btn.disabled=true;btn.dataset.old=btn.innerHTML;btn.innerHTML='<i data-lucide="loader-circle"></i> Creating account...';icons()}
+   if(message){message.textContent='';message.className='message'}
+   try{
+     await api('/api/auth/register',{method:'POST',body:JSON.stringify({full_name:data.full_name,email:data.email,phone:data.phone,password:data.password})});
+     const r=await api('/api/auth/login',{method:'POST',body:JSON.stringify({email:data.email,password:data.password})});
+     if(message){message.textContent='Account created. Redirecting...';message.className='message success'}
+     toast('Account created','Welcome to PAWCARE 360.');
+     window.location.assign('/dashboard');
+   }catch(err){
+     if(message){message.textContent=err.message;message.className='message error'}
+     toast('Could not create account',err.message,'error');
+     if(btn){btn.disabled=false;btn.innerHTML=btn.dataset.old||'Create account';icons()}
+   }
+ });
+}
 function initNotificationFilters(){document.querySelectorAll('[data-notification-filter]').forEach(b=>b.addEventListener('click',async()=>{document.querySelectorAll('[data-notification-filter]').forEach(x=>x.classList.remove('active'));b.classList.add('active');const r=await api('/api/notifications');renderNotifications(r.data||[],b.dataset.notificationFilter)}))}
-document.addEventListener('DOMContentLoaded',()=>{icons();initTheme();initSidebar();initProfileMenu();initSearch();animateCounters();initNotificationFilters();initCalendarView();syncNav();friendlyAuthNavigation();document.body.addEventListener('click',e=>{if(e.target.closest('#notificationBtn'))openNotifications()});qs('#logoutBtn')?.addEventListener('click',logout);});
+document.addEventListener('DOMContentLoaded',()=>{icons();initAuthForms();initTheme();initSidebar();initProfileMenu();initSearch();animateCounters();initNotificationFilters();initCalendarView();syncNav();friendlyAuthNavigation();document.body.addEventListener('click',e=>{if(e.target.closest('#notificationBtn'))openNotifications()});qs('#logoutBtn')?.addEventListener('click',logout);});
