@@ -48,7 +48,7 @@
         <a href="{% if request.path.startswith('/pets/') %}#reminders{% else %}/dashboard#reminders{% endif %}" class="side-link"><i data-lucide="bell-ring"></i><span>Reminders</span></a>
         <a href="{% if request.path.startswith('/pets/') %}#analytics{% else %}/dashboard#analytics{% endif %}" class="side-link"><i data-lucide="chart-no-axes-combined"></i><span>Analytics</span></a>
         <a href="{% if request.path.startswith('/pets/') %}#records{% else %}/dashboard#records{% endif %}" class="side-link"><i data-lucide="files"></i><span>Documents</span></a>
-        <a href="{% if request.path.startswith('/pets/') %}#owners{% else %}/dashboard#owners{% endif %}" class="side-link"><i data-lucide="users"></i><span>Owners</span></a>
+        <a href="/dashboard#owners" class="side-link"><i data-lucide="users"></i><span>Owners</span></a>
       </nav>
       <span class="nav-caption nav-caption-gap">SYSTEM</span>
       <nav class="side-nav">
