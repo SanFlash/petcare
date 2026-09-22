@@ -1,4 +1,7 @@
-# PetCare — Pet Health & Care Management Platform
+# PAWCARE 360
+
+> **Every Paw. Every Record. Every Reminder.**
+
 
 PetCare is a production-oriented Flask application for managing a pet owner's digital health passport: pets, medical history, vaccinations, medications, appointments, reminders and operational dashboards.
 
@@ -340,3 +343,34 @@ The dashboard now has a **Test SMS** button after an owner number is saved. Use 
 For India, Twilio documents country-specific SMS/DLT requirements; review the sender registration requirements before production use. urlTwilio India SMS guidelineshttps://www.twilio.com/en-us/guidelines/in/sms
 
 Render cron jobs run the configured command on schedule and receive their configured environment variables. urlRender cron job documentationhttps://render.com/docs/cronjobs
+
+
+## PAWCARE 360 UI/UX redesign
+
+The application now uses a veterinary SaaS command-center experience built around:
+
+- Responsive sidebar + top navigation shell
+- Light/dark theme with persisted preference
+- Global pet/appointment search
+- Action-first dashboard hierarchy
+- Needs Attention, Today's Schedule and Upcoming Events
+- Responsive appointment calendar with month/week/day controls
+- Pet overview cards and premium pet profile
+- Health timeline, vaccination and medication views
+- Notification center and SMS test flow
+- Admin operations workspace
+- Branded empty, loading, success and error states
+- Keyboard focus states and `prefers-reduced-motion` support
+- Mobile navigation drawer and compact, scrollable modals
+
+The redesign preserves the existing Flask, SQLAlchemy, JWT-cookie authentication, notification worker, Twilio SMS and database APIs rather than replacing the application with hardcoded UI data.
+
+### Design system
+
+Primary `#2F6F73`, secondary `#74B49B`, accent `#F4B942`, background `#F7FAFC`, surface `#FFFFFF`, text `#243238`, muted `#718096`, success `#43A978`, warning `#E9A23B`, danger `#E76F51`, info `#4F8CC9`.
+
+Dark mode uses `#0F1720`, `#16232D`, `#1C303A`, `#F4F7F8`, `#9AAEB8` and `#5CC8C2`.
+
+### Functional boundaries
+
+The current backend does not expose full CRUD endpoints for every requested enterprise screen (for example document uploads, appointment editing/rescheduling, medication editing, or owner management). The redesign therefore does not invent fake production data or pretend those operations exist. Existing working actions remain connected to their real APIs, while unsupported areas are presented through the available records and navigation anchors.
