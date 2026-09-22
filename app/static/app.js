@@ -3,7 +3,7 @@
 function initPawcareLoader(){
  const loader=document.getElementById('pawcareLoader'); if(!loader)return;
  const reduce=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
- const minTime=reduce?450:1850;
+ const minTime=reduce?700:2600;
  const started=performance.now();
  const finish=()=>{
    const wait=Math.max(0,minTime-(performance.now()-started));
