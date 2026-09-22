@@ -9,8 +9,17 @@ async function api(path,options={}){
    const csrf=cookieValue('csrf_access_token');
    if(csrf) headers['X-CSRF-TOKEN']=decodeURIComponent(csrf);
  }
- const r=await fetch(path,{credentials:'include',...options,headers});
- let d={};try{d=await r.json()}catch{}
+ const controller=new AbortController();
+ const timeout=options.timeout||15000;
+ const timer=setTimeout(()=>controller.abort(),timeout);
+ let r,d={};
+ try{
+   r=await fetch(path,{credentials:'include',...options,headers,signal:options.signal||controller.signal});
+   try{d=await r.json()}catch{}
+ }catch(error){
+   if(error.name==='AbortError') throw new Error('The request took too long. Please try again.');
+   throw error;
+ }finally{clearTimeout(timer)}
  if(!r.ok)throw new Error(d?.error?.message||d?.message||'Request failed');
  return d;
 }
@@ -51,8 +60,36 @@ function initProfileMenu(){const t=qs('#profileTrigger'),d=qs('#profileDropdown'
 async function logout(){try{await api('/api/auth/logout',{method:'POST'})}finally{location.href='/'}}
 function animateCounters(){document.querySelectorAll('[data-counter]').forEach(el=>{const target=Number(el.dataset.counter||0);const start=performance.now(),duration=650;function tick(now){const p=Math.min(1,(now-start)/duration),ease=1-Math.pow(1-p,3);el.textContent=Math.round(target*ease);if(p<1)requestAnimationFrame(tick)}requestAnimationFrame(tick)})}
 function initSearch(){const input=qs('#globalSearch');if(!input)return;let timer;const box=document.createElement('div');box.className='search-results';input.parentElement.appendChild(box);const search=async()=>{const q=input.value.trim();if(!q){box.classList.remove('open');return}try{const r=await api('/api/search?q='+encodeURIComponent(q));const items=r.data||[];box.innerHTML=items.length?items.map(x=>'<a href="'+esc(x.url)+'"><strong>'+esc(x.title)+'</strong><span>'+esc(x.subtitle)+'</span></a>').join(''):'<div class="search-empty">No matching records</div>';box.classList.add('open')}catch(e){box.innerHTML='<div class="search-empty">'+esc(e.message)+'</div>';box.classList.add('open')}};input.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(search,220)});input.addEventListener('keydown',e=>{if(e.key==='Escape'){input.value='';box.classList.remove('open')}if(e.key==='Enter'&&box.querySelector('a'))location.href=box.querySelector('a').href});document.addEventListener('click',e=>{if(!input.parentElement.contains(e.target))box.classList.remove('open')});document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();input.focus()}})}
-async function syncNav(){try{const r=await api('/api/profile');const name=r.data?.full_name||'Pet owner';const initial=name.charAt(0).toUpperCase();document.querySelectorAll('#sidebarName,#topProfileName').forEach(e=>e.textContent=name);document.querySelectorAll('.profile-avatar').forEach(e=>e.textContent=initial);document.querySelectorAll('.admin-link').forEach(e=>e.style.display=r.data?.role==='admin'?'flex':'none');qs('#logoutBtn')?.style.setProperty('display','flex')}catch(e){document.querySelectorAll('.admin-link').forEach(e=>e.style.display='none')}}
-function friendlyAuthNavigation(){document.querySelectorAll('a[href="/dashboard"],a[href^="/pets/"],a[href="/admin"],a[href^="/dashboard#"]').forEach(a=>a.addEventListener('click',async e=>{try{await api('/api/profile')}catch(err){e.preventDefault();location.href='/login?next='+encodeURIComponent(a.getAttribute('href'))}}))}
+async function syncNav(){
+ if(!qs('#sidebar'))return;
+ try{
+   const r=await api('/api/profile',{timeout:8000});
+   const name=r.data?.full_name||'Pet owner';
+   const initial=name.charAt(0).toUpperCase();
+   document.querySelectorAll('#sidebarName,#topProfileName').forEach(e=>e.textContent=name);
+   document.querySelectorAll('.profile-avatar').forEach(e=>e.textContent=initial);
+   document.querySelectorAll('.admin-link').forEach(e=>e.style.display=r.data?.role==='admin'?'flex':'none');
+   qs('#logoutBtn')?.style.setProperty('display','flex');
+ }catch(e){document.querySelectorAll('.admin-link').forEach(e=>e.style.display='none')}
+}
+function friendlyAuthNavigation(){
+ document.querySelectorAll('a[href^="/dashboard"],a[href^="/pets/"],a[href="/admin"]').forEach(a=>{
+   a.addEventListener('click',()=>{
+     if(a.target==='_blank'||a.hasAttribute('download')||a.getAttribute('href')?.startsWith('#'))return;
+     showPageLoader();
+   });
+ });
+}
+function showPageLoader(){
+ let loader=qs('#pageLoader');
+ if(!loader){
+   loader=document.createElement('div');loader.id='pageLoader';loader.className='page-loader';
+   loader.innerHTML='<span></span><span></span><span></span>';
+   document.body.appendChild(loader);
+ }
+ requestAnimationFrame(()=>loader.classList.add('active'));
+}
+function hidePageLoader(){qs('#pageLoader')?.classList.remove('active')}
 function initCalendarView(){const buttons=document.querySelectorAll('[data-calendar-view]'),days=document.querySelectorAll('.calendar-day');if(!buttons.length)return;const today=new Date();const iso=d=>d.toISOString().slice(0,10);buttons.forEach(b=>b.addEventListener('click',()=>{buttons.forEach(x=>x.classList.remove('active'));b.classList.add('active');const mode=b.dataset.calendarView;days.forEach(cell=>{const d=new Date(cell.dataset.day+'T00:00:00');let show=true;if(mode==='day')show=iso(d)===iso(today);if(mode==='week'){const monday=new Date(today);const offset=(today.getDay()+6)%7;monday.setDate(today.getDate()-offset);const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);show=d>=monday&&d<=sunday}cell.style.display=show?'block':'none'})}))}
 function initAuthForms(){
  const login=qs('#loginForm');
@@ -97,4 +134,85 @@ function initAuthForms(){
  });
 }
 function initNotificationFilters(){document.querySelectorAll('[data-notification-filter]').forEach(b=>b.addEventListener('click',async()=>{document.querySelectorAll('[data-notification-filter]').forEach(x=>x.classList.remove('active'));b.classList.add('active');const r=await api('/api/notifications');renderNotifications(r.data||[],b.dataset.notificationFilter)}))}
-document.addEventListener('DOMContentLoaded',()=>{icons();initAuthForms();initTheme();initSidebar();initProfileMenu();initSearch();animateCounters();initNotificationFilters();initCalendarView();syncNav();friendlyAuthNavigation();document.body.addEventListener('click',e=>{if(e.target.closest('#notificationBtn'))openNotifications()});qs('#logoutBtn')?.addEventListener('click',logout);});
+document.addEventListener('DOMContentLoaded',()=>{
+ document.body.classList.add('app-ready');
+ icons();initAuthForms();initTheme();initSidebar();initProfileMenu();initSearch();animateCounters();initNotificationFilters();initCalendarView();syncNav();friendlyAuthNavigation();
+ document.body.addEventListener('click',e=>{if(e.target.closest('#notificationBtn'))openNotifications()});
+ qs('#logoutBtn')?.addEventListener('click',logout);
+ document.addEventListener('click',e=>{
+   const link=e.target.closest('a[href]');
+   if(!link||e.defaultPrevented)return;
+   const href=link.getAttribute('href')||'';
+   if(link.target==='_blank'||link.hasAttribute('download')||href.startsWith('#')||href.startsWith('mailto:')||href.startsWith('tel:')||href.startsWith('javascript:'))return;
+   if(href===location.pathname+location.search){e.preventDefault();return}
+   showPageLoader();
+ });
+ window.addEventListener('pageshow',hidePageLoader);
+ window.addEventListener('load',()=>setTimeout(hidePageLoader,120));
+ window.addEventListener('error',()=>hidePageLoader());
+});
+
+
+/* PAWCARE 360 interaction layer */
+function setButtonBusy(button,busy,label){
+ if(!button)return;
+ if(busy){
+   if(button.dataset.busy==='1')return;
+   button.dataset.busy='1';button.disabled=true;button.dataset.originalHtml=button.innerHTML;
+   button.innerHTML='<span class="button-spinner" aria-hidden="true"></span><span>'+esc(label||'Working...')+'</span>';
+ }else{
+   button.disabled=false;button.dataset.busy='0';
+   if(button.dataset.originalHtml)button.innerHTML=button.dataset.originalHtml;
+   icons();
+ }
+}
+document.addEventListener('submit',e=>{
+ const form=e.target;
+ if(!(form instanceof HTMLFormElement)||form.dataset.noBusy==='true')return;
+ const button=form.querySelector('button[type="submit"]');
+ if(button&&!button.disabled&&!form.id?.match(/loginForm|registerForm/))setButtonBusy(button,true,'Saving...');
+});
+document.addEventListener('click',e=>{
+ const button=e.target.closest('button');
+ if(button?.dataset.loadingText&&!button.disabled)setButtonBusy(button,true,button.dataset.loadingText);
+});
+function initSectionScrollSpy(){
+ const links=[...document.querySelectorAll('.profile-tabs a[href^="#"]')];
+ if(!links.length||!('IntersectionObserver' in window))return;
+ const sections=links.map(a=>document.querySelector(a.getAttribute('href'))).filter(Boolean);
+ const observer=new IntersectionObserver(entries=>{
+   entries.forEach(entry=>{
+     if(!entry.isIntersecting)return;
+     links.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+entry.target.id));
+   });
+ },{rootMargin:'-25% 0px -60% 0px',threshold:0});
+ sections.forEach(s=>observer.observe(s));
+}
+function initSmoothAnchors(){
+ document.addEventListener('click',e=>{
+   const a=e.target.closest('a[href^="#"]');if(!a)return;
+   const id=a.getAttribute('href');if(!id||id==='#')return;
+   const target=document.querySelector(id);if(!target)return;
+   e.preventDefault();
+   const top=target.getBoundingClientRect().top+scrollY-(window.innerWidth<=640?78:92);
+   window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+   history.replaceState(null,'',id);
+ });
+}
+function initScrollTop(){
+ let btn=qs('#scrollTop');
+ if(!btn){
+   btn=document.createElement('button');btn.id='scrollTop';btn.className='scroll-top icon-btn';btn.setAttribute('aria-label','Back to top');
+   btn.innerHTML='<i data-lucide="arrow-up"></i>';document.body.appendChild(btn);icons();
+ }
+ const sync=()=>btn.classList.toggle('show',scrollY>500);
+ addEventListener('scroll',sync,{passive:true});sync();
+ btn.addEventListener('click',()=>scrollTo({top:0,behavior:'smooth'}));
+}
+function initTableMotion(){
+ document.querySelectorAll('.data-row,.event-row,.appointment-row,.record-row,.attention-item').forEach((el,i)=>{
+   el.style.setProperty('--row-delay',Math.min(i,8)*25+'ms');
+   el.classList.add('interactive-row');
+ });
+}
+initSectionScrollSpy();initSmoothAnchors();initScrollTop();initTableMotion();
