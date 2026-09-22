@@ -4,7 +4,7 @@ from werkzeug.security import check_password_hash,generate_password_hash
 from datetime import datetime,date,time
 from .extensions import db,limiter
 from .models import User,Pet,MedicalRecord,Vaccination,Medication,Appointment,Reminder,Notification
-from .services.notifications import notify_owner,process_due_reminders
+from .services.notifications import notify_owner,process_due_reminders,send_sms
 import re
 
 web=Blueprint("web",__name__)
@@ -77,8 +77,10 @@ def pdate(v):
 def register():
     d=request.get_json(silent=True) or {}; name=str(d.get("full_name","")).strip(); email=str(d.get("email","")).strip().lower(); password=d.get("password","")
     if len(name)<2 or "@" not in email or len(password)<8:return err("VALIDATION_ERROR","Name, valid email and password of at least 8 characters are required.",422)
+    phone=str(d.get("phone","")).strip() or None
+    if phone and not re.fullmatch(r"\+?[1-9]\d{7,14}",phone):return err("VALIDATION_ERROR","Use a valid mobile number in international E.164 format, for example +919876543210.",422)
     if User.query.filter_by(email=email).first():return err("CONFLICT","An account with that email already exists.",409)
-    u=User(full_name=name,email=email,phone=d.get("phone"),password_hash=generate_password_hash(password));db.session.add(u);db.session.commit()
+    u=User(full_name=name,email=email,phone=phone,password_hash=generate_password_hash(password));db.session.add(u);db.session.commit()
     return ok({"id":u.id,"email":u.email},201)
 
 @api.post("/auth/login")
@@ -107,8 +109,11 @@ def pet_create():
     if not str(d.get("name","")).strip() or not str(d.get("species","")).strip():return err("VALIDATION_ERROR","Pet name and species are required.",422)
     try:w=float(d["weight"]) if d.get("weight") not in (None,"") else None
     except:return err("VALIDATION_ERROR","Weight must be numeric.",422)
+    owner_phone=str(d.get("owner_phone",d.get("phone",""))).strip() or None
+    if owner_phone and not re.fullmatch(r"\+?[1-9]\d{7,14}",owner_phone):return err("VALIDATION_ERROR","Use a valid owner mobile number in international E.164 format, for example +919876543210.",422)
+    if owner_phone:u.phone=owner_phone
     p=Pet(owner_id=u.id,name=str(d["name"]).strip(),species=str(d["species"]).strip(),breed=d.get("breed"),gender=d.get("gender"),date_of_birth=pdate(d.get("date_of_birth")),weight=w,weight_unit=d.get("weight_unit","kg"),color=d.get("color"),microchip_id=d.get("microchip_id"),allergies=d.get("allergies"),conditions=d.get("conditions"),diet=d.get("diet"),behavior_notes=d.get("behavior_notes"),emergency_notes=d.get("emergency_notes"))
-    db.session.add(p);db.session.commit();return ok(pd(p),201)
+    db.session.add(p);db.session.commit();return ok({**pd(p),"owner_phone":u.phone},201)
 
 @api.get("/pets")
 @jwt_required(locations=["cookies"])
@@ -126,7 +131,7 @@ def vac_create(pid):
     v=Vaccination(pet_id=p.id,vaccine_name=name,vaccine_type=d.get("vaccine_type"),given_date=given,next_due_date=due,batch_number=d.get("batch_number"),veterinarian=d.get("veterinarian"),clinic=d.get("clinic"),notes=d.get("notes"))
     db.session.add(v)
     if due:db.session.add(Reminder(pet_id=p.id,title=f"{name} vaccination due",reminder_type="vaccination",due_date=due))
-    db.session.commit();notify_owner(u,f"{p.name}: vaccination saved",f"{name} has been added to {p.name}'s health passport.",event="vaccination");return ok({"id":v.id},201)
+    db.session.commit();notify_owner(u,f"{p.name}: vaccination saved",f"{name} has been added to {p.name}'s health passport.",event="vaccination",sms=False);return ok({"id":v.id},201)
 
 @api.post("/pets/<int:pid>/medications")
 @jwt_required(locations=["cookies"])
@@ -138,7 +143,7 @@ def med_create(pid):
     try:start=pdate(d.get("start_date")) or date.today();end=pdate(d.get("end_date"))
     except ValueError as e:return err("VALIDATION_ERROR",str(e),422)
     m=Medication(pet_id=p.id,name=name,dosage=d.get("dosage"),frequency=d.get("frequency"),start_date=start,end_date=end,administration_instructions=d.get("administration_instructions"),veterinarian=d.get("veterinarian"),reason=d.get("reason"),notes=d.get("notes"))
-    db.session.add(m);db.session.commit();notify_owner(u,f"{p.name}: medication added",f"{name} is now in the medication plan.",event="medication");return ok({"id":m.id},201)
+    db.session.add(m);db.session.commit();notify_owner(u,f"{p.name}: medication added",f"{name} is now in the medication plan.",event="medication",sms=False);return ok({"id":m.id},201)
 
 @api.post("/pets/<int:pid>/appointments")
 @jwt_required(locations=["cookies"])
@@ -148,10 +153,14 @@ def appt_create(pid):
     d=request.get_json(silent=True) or {}
     try:ad=pdate(d.get("appointment_date")) or date.today()
     except ValueError as e:return err("VALIDATION_ERROR",str(e),422)
-    a=Appointment(pet_id=p.id,vet_name=d.get("vet_name"),clinic=d.get("clinic"),appointment_date=ad,reason=d.get("reason"),notes=d.get("notes"))
+    at=None
+    if d.get("appointment_time"):
+        try:at=datetime.strptime(str(d.get("appointment_time")),"%H:%M").time()
+        except ValueError:return err("VALIDATION_ERROR","Appointment time must use HH:MM.",422)
+    a=Appointment(pet_id=p.id,vet_name=d.get("vet_name"),clinic=d.get("clinic"),appointment_date=ad,appointment_time=at,reason=d.get("reason"),notes=d.get("notes"))
     db.session.add(a);db.session.flush()
-    db.session.add(Reminder(pet_id=p.id,title=f"Vet appointment for {p.name}",reminder_type="appointment",due_date=ad,notes=a.reason))
-    db.session.commit();notify_owner(u,f"{p.name}: appointment added",f"Vet appointment scheduled for {ad.isoformat()}.",event="appointment");return ok({"id":a.id},201)
+    db.session.add(Reminder(pet_id=p.id,title=f"Vet appointment for {p.name}",reminder_type="appointment",due_date=ad,due_time=at,notes=a.reason))
+    db.session.commit();notify_owner(u,f"{p.name}: appointment added",f"Vet appointment scheduled for {ad.isoformat()}.",event="appointment",sms=False);return ok({"id":a.id},201)
 
 @api.post("/pets/<int:pid>/medical-records")
 @jwt_required(locations=["cookies"])
@@ -164,7 +173,7 @@ def medical_create(pid):
     r=MedicalRecord(pet_id=p.id,record_date=rd,veterinarian=d.get("veterinarian"),clinic=d.get("clinic"),reason=d.get("reason"),symptoms=d.get("symptoms"),diagnosis=d.get("diagnosis"),treatment=d.get("treatment"),prescription=d.get("prescription"),notes=d.get("notes"),follow_up_date=follow)
     db.session.add(r)
     if follow:db.session.add(Reminder(pet_id=p.id,title=f"{p.name}: medical follow-up",reminder_type="follow_up",due_date=follow))
-    db.session.commit();notify_owner(u,f"{p.name}: medical record saved","A new medical record was added to the health passport.",event="medical");return ok({"id":r.id},201)
+    db.session.commit();notify_owner(u,f"{p.name}: medical record saved","A new medical record was added to the health passport.",event="medical",sms=False);return ok({"id":r.id},201)
 
 @api.route("/pets/<int:pid>/reminders",methods=["GET","POST"])
 @jwt_required(locations=["cookies"])
@@ -178,8 +187,13 @@ def reminders(pid):
     if not str(d.get("title","")).strip():return err("VALIDATION_ERROR","Reminder title is required.",422)
     try:due=pdate(d.get("due_date")) or date.today()
     except ValueError as e:return err("VALIDATION_ERROR",str(e),422)
-    r=Reminder(pet_id=p.id,title=str(d["title"]).strip(),reminder_type=d.get("reminder_type","custom"),due_date=due,recurrence=d.get("recurrence","none"),notes=d.get("notes"))
-    db.session.add(r);db.session.commit();notify_owner(u,f"{p.name}: reminder created",f"{r.title} is due on {r.due_date.isoformat()}.",event="reminder_created");return ok({"id":r.id},201)
+    rt=d.get("reminder_type","custom")
+    due_time=None
+    if d.get("due_time"):
+        try:due_time=datetime.strptime(str(d.get("due_time")),"%H:%M").time()
+        except ValueError:return err("VALIDATION_ERROR","Reminder time must use HH:MM.",422)
+    r=Reminder(pet_id=p.id,title=str(d["title"]).strip(),reminder_type=rt,due_date=due,due_time=due_time,recurrence=d.get("recurrence","none"),notes=d.get("notes"))
+    db.session.add(r);db.session.commit();notify_owner(u,f"{p.name}: reminder created",f"{r.title} is due on {r.due_date.isoformat()}.",event="reminder_created",sms=False);return ok({"id":r.id},201)
 
 @api.get("/notifications")
 @jwt_required(locations=["cookies"])
@@ -204,9 +218,22 @@ def profile():
     if "full_name" in d and len(str(d["full_name"]).strip())>=2:u.full_name=str(d["full_name"]).strip()
     if "phone" in d:
         phone=str(d["phone"]).strip() or None
-        if phone and not re.fullmatch(r"\\+?[1-9]\\d{7,14}",phone): return err("VALIDATION_ERROR","Use a valid mobile number, preferably in international E.164 format such as +919876543210.",422)
+        if phone and not re.fullmatch(r"\+?[1-9]\d{7,14}",phone): return err("VALIDATION_ERROR","Use a valid mobile number, preferably in international E.164 format such as +919876543210.",422)
         u.phone=phone
     db.session.commit();return ok({"id":u.id,"full_name":u.full_name,"email":u.email,"phone":u.phone,"role":u.role})
+
+@api.post("/notifications/test-sms")
+@jwt_required(locations=["cookies"])
+def test_sms():
+    u=user()
+    if not u.phone:return err("PHONE_REQUIRED","Save the owner mobile number first.",422)
+    import os
+    configured=bool(os.getenv("TWILIO_ACCOUNT_SID") and os.getenv("TWILIO_AUTH_TOKEN") and (os.getenv("TWILIO_FROM_NUMBER") or os.getenv("TWILIO_MESSAGING_SERVICE_SID")))
+    if not configured:return err("SMS_NOT_CONFIGURED","Twilio SMS is not configured on this environment.",503)
+    sent,detail=send_sms(u.phone,"PetCare test SMS: your owner alert number is connected successfully.")
+    if not sent:return err("SMS_SEND_FAILED",detail or "Twilio could not send the test message.",502)
+    db.session.add(Notification(user_id=u.id,title="PetCare test SMS",message="Your owner alert number is connected successfully.",channel="sms",status="sent"));db.session.commit()
+    return ok({"sent":True,"phone":u.phone})
 
 @api.get("/notifications/preferences")
 @jwt_required(locations=["cookies"])
