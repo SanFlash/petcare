@@ -35,3 +35,58 @@ html[data-theme="dark"]{--bg:#0F1720;--surface:#16232D;--text:#F4F7F8;--muted:#9
 .public-topbar{height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 34px;background:color-mix(in srgb,var(--surface) 92%,transparent);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:60;backdrop-filter:blur(15px)}.public-nav{display:flex;align-items:center;gap:18px}.public-nav>a:not(.btn){font-size:12px;color:var(--muted);font-weight:700}.public-nav>a:not(.btn):hover{color:var(--text)}.public-main{width:min(1500px,100%);margin:auto;padding:0 34px}.search-results{position:absolute;z-index:130;left:0;right:0;top:46px;display:none;background:var(--surface);border:1px solid var(--border);border-radius:13px;box-shadow:var(--shadow-lg);padding:6px}.search-results.open{display:block;animation:pop .15s ease}.search-results a{display:block;padding:9px 10px;border-radius:8px}.search-results a:hover{background:var(--bg)}.search-results strong,.search-results span{display:block}.search-results strong{font-size:11px}.search-results span{font-size:9px;color:var(--muted);margin-top:2px}.search-empty{padding:12px;font-size:10px;color:var(--muted)}.modal-open{overflow:hidden}@media(max-width:640px){.public-topbar{height:62px;padding:0 14px}.public-main{padding:0 14px}.public-nav{gap:8px}.public-nav>a:not(.btn){display:none}}
 
 .calendar-section{margin:0 0 22px}.calendar-switcher{display:flex;gap:4px;padding:3px;border:1px solid var(--border);border-radius:9px;background:var(--bg)}.calendar-switcher button{border:0;background:transparent;color:var(--muted);padding:6px 9px;border-radius:7px;font-size:10px;font-weight:700}.calendar-switcher button.active{background:var(--surface);color:var(--primary);box-shadow:0 2px 8px rgba(36,50,56,.06)}.calendar-grid{border:1px solid var(--border);border-radius:12px;overflow:hidden}.calendar-weekdays,.calendar-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}.calendar-weekdays{background:var(--bg);border-bottom:1px solid var(--border)}.calendar-weekdays span{padding:9px;font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase}.calendar-day{min-height:105px;padding:8px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface);overflow:hidden}.calendar-day:nth-child(7n){border-right:0}.calendar-day strong{display:block;font-size:11px;margin-bottom:6px}.calendar-day.today{background:color-mix(in srgb,var(--primary-light) 48%,var(--surface))}.calendar-day.today strong{color:var(--primary)}.muted-day{opacity:.45}.calendar-event{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:4px 5px;margin-top:3px;border-radius:5px;font-size:8px;font-weight:700}.calendar-event.blue{background:#E8F1FA;color:#376F9F}.calendar-event.amber{background:#FFF2D2;color:#956300}.calendar-event.danger{background:#FCE7E2;color:#B74D35}@media(max-width:640px){.calendar-day{min-height:72px;padding:6px}.calendar-weekdays span{padding:7px 5px;font-size:8px}.calendar-event{font-size:7px}.calendar-switcher button{padding:5px 7px}}
+
+/* --- PAWCARE 360 UX polish: motion, feedback, density and navigation --- */
+html{scroll-padding-top:92px}
+body{transition:background-color .2s ease,color .2s ease}
+button,a,input,select,textarea{-webkit-tap-highlight-color:transparent}
+button:disabled,.btn:disabled{cursor:not-allowed;opacity:.62;transform:none!important}
+.btn,.icon-btn,.side-link,.profile-trigger,.calendar-switcher button,.profile-tabs a,.pet-card,.data-row,.event-row,.appointment-row,.record-row{will-change:transform}
+.btn:focus-visible,.icon-btn:focus-visible,.side-link:focus-visible,.profile-trigger:focus-visible,.profile-tabs a:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 20%,transparent)}
+/* Fast, subtle page transition */
+.page-loader{position:fixed;z-index:9999;left:0;right:0;top:0;height:3px;overflow:hidden;opacity:0;pointer-events:none;background:transparent;transition:opacity .15s ease}
+.page-loader.active{opacity:1}
+.page-loader:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--primary),#74B49B,transparent);transform:translateX(-100%);animation:pageProgress 1s ease-in-out infinite}
+.page-loader span{display:none}
+@keyframes pageProgress{to{transform:translateX(100%)}}
+/* Better loading affordance */
+.button-spinner{width:15px;height:15px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:buttonSpin .65s linear infinite}
+@keyframes buttonSpin{to{transform:rotate(360deg)}}
+/* Interactive rows feel clickable without causing layout jumps */
+.interactive-row{position:relative;transition:background .16s ease,transform .16s ease,padding-left .16s ease;border-radius:10px}
+.interactive-row:hover{background:color-mix(in srgb,var(--primary-light) 42%,transparent);padding-left:7px;padding-right:7px}
+.interactive-row:active{transform:scale(.995)}
+/* Active profile section */
+.profile-tabs a{position:relative;transition:color .16s ease,background .16s ease}
+.profile-tabs a.active{color:var(--primary);background:var(--primary-light)}
+.profile-tabs a.active:after{content:"";position:absolute;left:10px;right:10px;bottom:3px;height:2px;border-radius:99px;background:var(--primary)}
+/* More readable form controls */
+.auth-card input,.modal input,.modal select,.modal textarea{appearance:none}
+.auth-card input::placeholder,.modal input::placeholder,.modal textarea::placeholder{color:color-mix(in srgb,var(--muted) 75%,transparent)}
+.auth-card input:hover,.modal input:hover,.modal select:hover,.modal textarea:hover{border-color:color-mix(in srgb,var(--primary) 30%,var(--border))}
+input[type="date"],input[type="time"]{color-scheme:light}
+html[data-theme="dark"] input[type="date"],html[data-theme="dark"] input[type="time"]{color-scheme:dark}
+/* Sticky mobile action rhythm */
+@media(max-width:640px){
+ .head-actions .btn{min-height:44px}
+ .btn{min-height:42px}
+ .section-title .btn-sm{min-height:36px}
+ .profile-tabs{scrollbar-width:none}
+ .profile-tabs::-webkit-scrollbar{display:none}
+ .notification-panel{max-height:calc(100vh - 84px)}
+}
+/* Floating back-to-top */
+.scroll-top{position:fixed;z-index:75;right:22px;bottom:22px;width:42px;height:42px;opacity:0;pointer-events:none;transform:translateY(10px);background:var(--surface);box-shadow:var(--shadow-lg);transition:opacity .2s ease,transform .2s ease}
+.scroll-top.show{opacity:1;pointer-events:auto;transform:none}
+.scroll-top svg{width:17px}
+@media(max-width:640px){.scroll-top{right:14px;bottom:14px;width:40px;height:40px}}
+/* Calendar clarity */
+.calendar-day{transition:background .15s ease,box-shadow .15s ease}
+.calendar-day:hover{background:color-mix(in srgb,var(--primary-light) 25%,var(--surface))}
+.calendar-event{transition:transform .12s ease,filter .12s ease}
+.calendar-event:hover{transform:translateX(2px);filter:brightness(.98)}
+/* Avoid expensive animations for users who prefer stability */
+@media(prefers-reduced-motion:reduce){
+ .page-loader:before,.button-spinner{animation:none}
+ .interactive-row,.scroll-top,.calendar-day,.calendar-event{transition:none}
+}
