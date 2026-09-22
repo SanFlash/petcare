@@ -41,10 +41,18 @@ def dashboard():
     if identity is None: return render_template("login.html", login_redirect="/dashboard")
     uid=int(identity); user=db.session.get(User,uid)
     process_due_reminders(owner_id=uid)
+    today=date.today()
     pets=Pet.query.filter_by(owner_id=uid).order_by(Pet.name).all()
-    reminders=Reminder.query.join(Pet).filter(Pet.owner_id==uid).order_by(Reminder.due_date.asc()).limit(20).all()
+    reminders=Reminder.query.join(Pet).filter(Pet.owner_id==uid,Reminder.status.notin_(["completed","cancelled"])).order_by(Reminder.due_date.asc(),Reminder.id.asc()).limit(50).all()
+    appointments=Appointment.query.join(Pet).filter(Pet.owner_id==uid).order_by(Appointment.appointment_date.asc(),Appointment.appointment_time.asc()).limit(50).all()
+    vaccinations=Vaccination.query.join(Pet).filter(Pet.owner_id==uid).order_by(Vaccination.next_due_date.asc().nullslast()).limit(50).all()
+    medications=Medication.query.join(Pet).filter(Pet.owner_id==uid).order_by(Medication.start_date.desc()).limit(50).all()
+    medical_records=MedicalRecord.query.join(Pet).filter(Pet.owner_id==uid).order_by(MedicalRecord.record_date.desc()).limit(30).all()
     unread=Notification.query.filter_by(user_id=uid,is_read=False).count()
-    return render_template("dashboard.html",user=user,pets=pets,reminders=reminders,unread=unread,today=date.today())
+    overdue=[r for r in reminders if r.due_date<today and r.status!="completed"]
+    due_soon=[r for r in reminders if today<=r.due_date<=today.replace(day=today.day)+__import__("datetime").timedelta(days=7)]
+    today_events=[r for r in reminders if r.due_date==today]
+    return render_template("dashboard.html",user=user,pets=pets,reminders=reminders,appointments=appointments,vaccinations=vaccinations,medications=medications,medical_records=medical_records,unread=unread,today=today,overdue=overdue,due_soon=due_soon,today_events=today_events)
 
 @web.get("/pets/<int:pet_id>")
 @jwt_required(optional=True,locations=["cookies"])
