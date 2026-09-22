@@ -22,6 +22,7 @@ class Appointment(db.Model):
 class Reminder(db.Model):
     __tablename__="reminders"
     id=db.Column(db.Integer,primary_key=True); pet_id=db.Column(db.Integer,db.ForeignKey("pets.id"),nullable=False,index=True); title=db.Column(db.String(160),nullable=False); reminder_type=db.Column(db.String(50),default="custom",nullable=False); due_date=db.Column(db.Date,nullable=False,index=True); due_time=db.Column(db.Time); recurrence=db.Column(db.String(50),default="none"); status=db.Column(db.String(30),default="upcoming",nullable=False); notes=db.Column(db.Text); created_at=db.Column(db.DateTime(timezone=True),default=utcnow,nullable=False)
+    pet=db.relationship("Pet",lazy="joined")
 class Notification(db.Model):
     __tablename__="notifications"
     id=db.Column(db.Integer,primary_key=True); user_id=db.Column(db.Integer,db.ForeignKey("users.id"),nullable=False,index=True); title=db.Column(db.String(160),nullable=False); message=db.Column(db.Text,nullable=False); channel=db.Column(db.String(30),default="in_app",nullable=False); status=db.Column(db.String(30),default="pending",nullable=False); is_read=db.Column(db.Boolean,default=False,nullable=False); created_at=db.Column(db.DateTime(timezone=True),default=utcnow,nullable=False)
