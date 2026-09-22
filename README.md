@@ -305,3 +305,38 @@ The target product covers a digital pet health passport: profile data, medical h
 ### Important product disclaimer
 
 PetCare is a tracking and reminder platform. It is not a veterinary diagnostic system and does not replace professional veterinary care.
+
+
+## Owner appointment SMS schedule
+
+When a pet is created, the owner mobile number can be saved with the pet profile. PetCare creates reminders for appointments, vaccination due dates, medical follow-ups, and custom/checkup reminders.
+
+For each upcoming event, the notification worker sends:
+
+- **2 days before** — first SMS follow-up
+- **1 day before** — second SMS follow-up
+- **Event day** — final SMS reminder
+
+Each stage is deduplicated so the 15-minute worker does not send the same stage repeatedly.
+
+The scheduler uses `APP_TIMEZONE` (default `Asia/Kolkata`) rather than the server's UTC date.
+
+### Twilio configuration
+
+Set these server-side environment variables:
+
+```env
+TWILIO_ACCOUNT_SID=...
+TWILIO_AUTH_TOKEN=...
+TWILIO_FROM_NUMBER=...
+TWILIO_MESSAGING_SERVICE_SID=...
+APP_TIMEZONE=Asia/Kolkata
+```
+
+Use either `TWILIO_FROM_NUMBER` or `TWILIO_MESSAGING_SERVICE_SID`.
+
+The dashboard now has a **Test SMS** button after an owner number is saved. Use it before creating a real appointment so you know the Twilio connection is working.
+
+For India, Twilio documents country-specific SMS/DLT requirements; review the sender registration requirements before production use. urlTwilio India SMS guidelineshttps://www.twilio.com/en-us/guidelines/in/sms
+
+Render cron jobs run the configured command on schedule and receive their configured environment variables. urlRender cron job documentationhttps://render.com/docs/cronjobs
