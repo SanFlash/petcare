@@ -35,21 +35,20 @@
         <span class="brand-mark"><img src="{{ url_for('static',filename='images/logo.png') }}" alt="PAWCARE360 logo"></span>
         <span class="brand-wordmark"><strong>PAWCARE</strong><em>360</em></span>
       </a>
-      <button class="icon-btn sidebar-close" id="sidebarClose" aria-label="Close navigation"><i data-lucide="x"></i></button>
     </div>
     <div class="sidebar-scroll">
       <span class="nav-caption">WORKSPACE</span>
       <nav class="side-nav" aria-label="Primary navigation">
         <a href="/dashboard" class="side-link"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
         <a href="/dashboard#pets" class="side-link"><i data-lucide="paw-print"></i><span>Pets</span></a>
-        <a href="/dashboard#appointments" class="side-link"><i data-lucide="calendar-days"></i><span>Appointments</span></a>
-        <a href="/dashboard#vaccinations" class="side-link"><i data-lucide="syringe"></i><span>Vaccinations</span></a>
-        <a href="/dashboard#medications" class="side-link"><i data-lucide="pill"></i><span>Medications</span></a>
-        <a href="/dashboard#records" class="side-link"><i data-lucide="file-heart"></i><span>Health Records</span></a>
-        <a href="/dashboard#reminders" class="side-link"><i data-lucide="bell-ring"></i><span>Reminders</span></a>
-        <a href="/dashboard#analytics" class="side-link"><i data-lucide="chart-no-axes-combined"></i><span>Analytics</span></a>
-        <a href="/dashboard#records" class="side-link"><i data-lucide="files"></i><span>Documents</span></a>
-        <a href="/dashboard#owners" class="side-link"><i data-lucide="users"></i><span>Owners</span></a>
+        <a href="{% if request.path.startswith('/pets/') %}#appointments{% else %}/dashboard#appointments{% endif %}" class="side-link"><i data-lucide="calendar-days"></i><span>Appointments</span></a>
+        <a href="{% if request.path.startswith('/pets/') %}#vaccinations{% else %}/dashboard#vaccinations{% endif %}" class="side-link"><i data-lucide="syringe"></i><span>Vaccinations</span></a>
+        <a href="{% if request.path.startswith('/pets/') %}#medications{% else %}/dashboard#medications{% endif %}" class="side-link"><i data-lucide="pill"></i><span>Medications</span></a>
+        <a href="{% if request.path.startswith('/pets/') %}#records{% else %}/dashboard#records{% endif %}" class="side-link"><i data-lucide="file-heart"></i><span>Health Records</span></a>
+        <a href="{% if request.path.startswith('/pets/') %}#reminders{% else %}/dashboard#reminders{% endif %}" class="side-link"><i data-lucide="bell-ring"></i><span>Reminders</span></a>
+        <a href="{% if request.path.startswith('/pets/') %}#analytics{% else %}/dashboard#analytics{% endif %}" class="side-link"><i data-lucide="chart-no-axes-combined"></i><span>Analytics</span></a>
+        <a href="{% if request.path.startswith('/pets/') %}#records{% else %}/dashboard#records{% endif %}" class="side-link"><i data-lucide="files"></i><span>Documents</span></a>
+        <a href="{% if request.path.startswith('/pets/') %}#owners{% else %}/dashboard#owners{% endif %}" class="side-link"><i data-lucide="users"></i><span>Owners</span></a>
       </nav>
       <span class="nav-caption nav-caption-gap">SYSTEM</span>
       <nav class="side-nav">
