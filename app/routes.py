@@ -1,7 +1,7 @@
 from flask import Blueprint,jsonify,request,render_template
 from flask_jwt_extended import create_access_token,set_access_cookies,unset_jwt_cookies,jwt_required,verify_jwt_in_request,get_jwt_identity,get_jwt
 from werkzeug.security import check_password_hash,generate_password_hash
-from datetime import datetime,date,time
+from datetime import datetime,date,time,timedelta
 from .extensions import db,limiter
 from .models import User,Pet,MedicalRecord,Vaccination,Medication,Appointment,Reminder,Notification
 from .services.notifications import notify_owner,process_due_reminders,send_sms
@@ -50,7 +50,7 @@ def dashboard():
     medical_records=MedicalRecord.query.join(Pet).filter(Pet.owner_id==uid).order_by(MedicalRecord.record_date.desc()).limit(30).all()
     unread=Notification.query.filter_by(user_id=uid,is_read=False).count()
     overdue=[r for r in reminders if r.due_date<today and r.status!="completed"]
-    due_soon=[r for r in reminders if today<=r.due_date<=today.replace(day=today.day)+__import__("datetime").timedelta(days=7)]
+    due_soon=[r for r in reminders if today<=r.due_date<=today+timedelta(days=7)]
     today_events=[r for r in reminders if r.due_date==today]
     return render_template("dashboard.html",user=user,pets=pets,reminders=reminders,appointments=appointments,vaccinations=vaccinations,medications=medications,medical_records=medical_records,unread=unread,today=today,overdue=overdue,due_soon=due_soon,today_events=today_events)
 
@@ -217,6 +217,19 @@ def reminders(pid):
         except ValueError:return err("VALIDATION_ERROR","Reminder time must use HH:MM.",422)
     r=Reminder(pet_id=p.id,title=str(d["title"]).strip(),reminder_type=rt,due_date=due,due_time=due_time,recurrence=d.get("recurrence","none"),notes=d.get("notes"))
     db.session.add(r);db.session.commit();notify_owner(u,f"{p.name}: reminder created",f"{r.title} is due on {r.due_date.isoformat()}.",event="reminder_created",sms=False);return ok({"id":r.id},201)
+
+@api.get("/search")
+@jwt_required(locations=["cookies"])
+def search():
+    u=user(); q=str(request.args.get("q","")).strip()
+    if not q:return ok([])
+    like=f"%{q}%"
+    pets=Pet.query.filter(Pet.owner_id==u.id,db.or_(Pet.name.ilike(like),Pet.species.ilike(like),Pet.breed.ilike(like))).limit(10).all()
+    if q.upper().startswith("PET-") and q[4:].isdigit():
+        p=Pet.query.filter_by(id=int(q[4:]),owner_id=u.id).first()
+        if p and p not in pets:pets.insert(0,p)
+    appointments=Appointment.query.join(Pet).filter(Pet.owner_id==u.id,db.or_(Appointment.reason.ilike(like),Appointment.clinic.ilike(like),Appointment.vet_name.ilike(like))).limit(10).all()
+    return ok([{"type":"pet","id":p.id,"title":p.name,"subtitle":f"{p.species} · PET-{p.id:04d}","url":f"/pets/{p.id}"} for p in pets]+[{"type":"appointment","id":a.id,"title":a.reason or "Appointment","subtitle":f"{a.pet.name} · {a.appointment_date.isoformat()}","url":f"/pets/{a.pet.id}#appointments"} for a in appointments])
 
 @api.get("/notifications")
 @jwt_required(locations=["cookies"])
