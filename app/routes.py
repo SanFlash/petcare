@@ -225,13 +225,19 @@ def reminders(pid):
 def search():
     u=user(); q=str(request.args.get("q","")).strip()
     if not q:return ok([])
-    like=f"%{q}%"
-    pets=Pet.query.filter(Pet.owner_id==u.id,or_(Pet.name.ilike(like),Pet.species.ilike(like),Pet.breed.ilike(like))).limit(10).all()
+    like=f"%{q}%"; is_admin=u.role=="admin"
+    pet_filter=Pet.query if is_admin else Pet.query.filter(Pet.owner_id==u.id)
+    pets=pet_filter.filter(or_(Pet.name.ilike(like),Pet.species.ilike(like),Pet.breed.ilike(like))).limit(10).all()
     if q.upper().startswith("PET-") and q[4:].isdigit():
-        p=Pet.query.filter_by(id=int(q[4:]),owner_id=u.id).first()
+        p=Pet.query.filter_by(id=int(q[4:])).first() if is_admin else Pet.query.filter_by(id=int(q[4:]),owner_id=u.id).first()
         if p and p not in pets:pets.insert(0,p)
-    appointments=Appointment.query.join(Pet).filter(Pet.owner_id==u.id,or_(Appointment.reason.ilike(like),Appointment.clinic.ilike(like),Appointment.vet_name.ilike(like))).limit(10).all()
-    return ok([{"type":"pet","id":p.id,"title":p.name,"subtitle":f"{p.species} · PET-{p.id:04d}","url":f"/pets/{p.id}"} for p in pets]+[{"type":"appointment","id":a.id,"title":a.reason or "Appointment","subtitle":f"{a.pet.name} · {a.appointment_date.isoformat()}","url":f"/pets/{a.pet.id}#appointments"} for a in appointments])
+    appt_filter=Appointment.query.join(Pet) if is_admin else Appointment.query.join(Pet).filter(Pet.owner_id==u.id)
+    appointments=appt_filter.filter(or_(Appointment.reason.ilike(like),Appointment.clinic.ilike(like),Appointment.vet_name.ilike(like))).limit(10).all()
+    users=User.query.filter(or_(User.full_name.ilike(like),User.email.ilike(like),User.phone.ilike(like))).limit(8).all() if is_admin else []
+    results=[{"type":"pet","id":p.id,"title":p.name,"subtitle":f"{p.species} · PET-{p.id:04d}","url":f"/pets/{p.id}"} for p in pets]
+    results += [{"type":"appointment","id":a.id,"title":a.reason or "Appointment","subtitle":f"{a.pet.name} · {a.appointment_date.isoformat()}","url":f"/pets/{a.pet.id}#appointments"} for a in appointments]
+    if is_admin:results += [{"type":"owner","id":x.id,"title":x.full_name,"subtitle":f"{x.email} · {x.phone or 'No phone'}","url":"/admin#owners"} for x in users]
+    return ok(results[:20])
 
 @api.get("/notifications")
 @jwt_required(locations=["cookies"])
