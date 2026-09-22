@@ -40,21 +40,91 @@ def register_page(): return render_template("register.html")
 @jwt_required(optional=True,locations=["cookies"])
 def dashboard():
     identity=get_jwt_identity()
-    if identity is None: return render_template("login.html", login_redirect="/dashboard")
-    uid=int(identity); user=db.session.get(User,uid)
-    process_due_reminders(owner_id=uid)
+    if identity is None:
+        return render_template("login.html", login_redirect="/dashboard")
+
+    uid=int(identity)
+    user=db.session.get(User,uid)
+    if user is None:
+        return render_template("login.html", login_redirect="/dashboard")
+
+    # Do not let notification/SMS processing take down the dashboard. The cron
+    # worker handles the same job, while the dashboard should remain available
+    # even when Twilio or an individual reminder record has a problem.
+    try:
+        process_due_reminders(owner_id=uid)
+    except Exception:
+        db.session.rollback()
+        web.logger.exception("Dashboard reminder processing failed for user %s", uid)
+
     today=date.today()
-    pets=Pet.query.filter_by(owner_id=uid).order_by(Pet.name).all()
-    reminders=Reminder.query.join(Pet).filter(Pet.owner_id==uid,Reminder.status.notin_(["completed","cancelled"])).order_by(Reminder.due_date.asc(),Reminder.id.asc()).limit(50).all()
-    appointments=Appointment.query.join(Pet).filter(Pet.owner_id==uid).order_by(Appointment.appointment_date.asc(),Appointment.appointment_time.asc()).limit(50).all()
-    vaccinations=Vaccination.query.join(Pet).filter(Pet.owner_id==uid).order_by(Vaccination.next_due_date.asc().nullslast()).limit(50).all()
-    medications=Medication.query.join(Pet).filter(Pet.owner_id==uid).order_by(Medication.start_date.desc()).limit(50).all()
-    medical_records=MedicalRecord.query.join(Pet).filter(Pet.owner_id==uid).order_by(MedicalRecord.record_date.desc()).limit(30).all()
-    unread=Notification.query.filter_by(user_id=uid,is_read=False).count()
-    overdue=[r for r in reminders if r.due_date<today and r.status!="completed"]
-    due_soon=[r for r in reminders if today<=r.due_date<=today+timedelta(days=7)]
+
+    def safe_query(label, factory, default=None):
+        try:
+            return factory()
+        except Exception:
+            db.session.rollback()
+            web.logger.exception("Dashboard query failed: %s (user=%s)", label, uid)
+            return [] if default is None else default
+
+    pets=safe_query("pets", lambda: Pet.query.filter_by(owner_id=uid).order_by(Pet.name).all())
+    reminders=safe_query(
+        "reminders",
+        lambda: Reminder.query.join(Pet).filter(
+            Pet.owner_id==uid,
+            Reminder.status.notin_(["completed","cancelled"])
+        ).order_by(Reminder.due_date.asc(),Reminder.id.asc()).limit(50).all()
+    )
+    appointments=safe_query(
+        "appointments",
+        lambda: Appointment.query.join(Pet).filter(
+            Pet.owner_id==uid
+        ).order_by(Appointment.appointment_date.asc(),Appointment.appointment_time.asc()).limit(50).all()
+    )
+    vaccinations=safe_query(
+        "vaccinations",
+        lambda: Vaccination.query.join(Pet).filter(
+            Pet.owner_id==uid
+        ).order_by(Vaccination.next_due_date.asc().nullslast()).limit(50).all()
+    )
+    medications=safe_query(
+        "medications",
+        lambda: Medication.query.join(Pet).filter(
+            Pet.owner_id==uid
+        ).order_by(Medication.start_date.desc()).limit(50).all()
+    )
+    medical_records=safe_query(
+        "medical records",
+        lambda: MedicalRecord.query.join(Pet).filter(
+            Pet.owner_id==uid
+        ).order_by(MedicalRecord.record_date.desc()).limit(30).all()
+    )
+    unread=safe_query(
+        "notifications",
+        lambda: Notification.query.filter_by(user_id=uid,is_read=False).count(),
+        default=0
+    )
+
+    overdue=[r for r in reminders if r.due_date and r.due_date<today and r.status!="completed"]
+    due_soon=[r for r in reminders if r.due_date and today<=r.due_date<=today+timedelta(days=7)]
     today_events=[r for r in reminders if r.due_date==today]
-    return render_template("dashboard.html",user=user,pets=pets,reminders=reminders,appointments=appointments,vaccinations=vaccinations,medications=medications,medical_records=medical_records,unread=unread,today=today,overdue=overdue,due_soon=due_soon,today_events=today_events,month_weeks=calendar.Calendar(firstweekday=0).monthdatescalendar(today.year,today.month))
+
+    return render_template(
+        "dashboard.html",
+        user=user,
+        pets=pets,
+        reminders=reminders,
+        appointments=appointments,
+        vaccinations=vaccinations,
+        medications=medications,
+        medical_records=medical_records,
+        unread=unread,
+        today=today,
+        overdue=overdue,
+        due_soon=due_soon,
+        today_events=today_events,
+        month_weeks=calendar.Calendar(firstweekday=0).monthdatescalendar(today.year,today.month)
+    )
 
 @web.get("/pets/<int:pet_id>")
 @jwt_required(optional=True,locations=["cookies"])
