@@ -164,7 +164,7 @@ def user():
 def owned(pid):
     u=user(); return (u,Pet.query.filter_by(id=pid,owner_id=u.id).first()) if u else (None,None)
 def pd(p):
-    return {"id":p.id,"name":p.name,"species":p.species,"breed":p.breed,"gender":p.gender,"date_of_birth":p.date_of_birth.isoformat() if p.date_of_birth else None,"weight":p.weight,"weight_unit":p.weight_unit,"color":p.color,"microchip_id":p.microchip_id,"allergies":p.allergies,"conditions":p.conditions,"diet":p.diet,"behavior_notes":p.behavior_notes,"emergency_notes":p.emergency_notes}
+    return {"id":p.id,"name":p.name,"species":p.species,"breed":p.breed,"gender":p.gender,"date_of_birth":p.date_of_birth.isoformat() if p.date_of_birth else None,"weight":p.weight,"weight_unit":p.weight_unit,"color":p.color,"microchip_id":p.microchip_id,"photo_url":p.photo_url,"allergies":p.allergies,"conditions":p.conditions,"diet":p.diet,"behavior_notes":p.behavior_notes,"emergency_notes":p.emergency_notes}
 def pdate(v):
     if not v:return None
     try:return datetime.strptime(str(v),"%Y-%m-%d").date()
