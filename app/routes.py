@@ -5,6 +5,7 @@ from datetime import datetime,date,timedelta
 from .extensions import db,limiter
 from .models import User,Pet,MedicalRecord,Vaccination,Medication,Appointment,Reminder,Notification,WeightRecord,PreventiveCare
 from .services.notifications import notify_owner,process_due_reminders
+from .services.notifications import notify_owner,process_due_reminders
 
 web=Blueprint("web",__name__); api=Blueprint("api",__name__)
 
@@ -173,6 +174,47 @@ def reminders(pid):
     except ValueError as e:return err("VALIDATION_ERROR",str(e),422)
     r=Reminder(pet_id=p.id,title=str(d["title"]).strip(),reminder_type=d.get("reminder_type","custom"),due_date=due,recurrence=d.get("recurrence","none"),notes=d.get("notes"))
     db.session.add(r);db.session.commit();notify_owner(u,f"{p.name}: reminder created",f"{r.title} is due on {r.due_date.isoformat()}.",event="reminder_created");return ok({"id":r.id},201)
+
+@api.route("/pets/<int:pid>/reminders",methods=["GET","POST"])
+@jwt_required(locations=["cookies"])
+def reminders(pid):
+    u,p=owned(pid)
+    if not p:return err("NOT_FOUND","Pet not found.",404)
+    if request.method=="GET":
+        rows=Reminder.query.filter_by(pet_id=p.id).order_by(Reminder.due_date.asc()).all()
+        return ok([{"id":r.id,"title":r.title,"type":r.reminder_type,"due_date":r.due_date.isoformat(),"status":r.status,"recurrence":r.recurrence,"notes":r.notes} for r in rows])
+    d=request.get_json(silent=True) or {}
+    if not str(d.get("title","")).strip():return err("VALIDATION_ERROR","Reminder title is required.",422)
+    try:due=pdate(d.get("due_date")) or date.today()
+    except ValueError as e:return err("VALIDATION_ERROR",str(e),422)
+    r=Reminder(pet_id=p.id,title=str(d["title"]).strip(),reminder_type=d.get("reminder_type","custom"),due_date=due,recurrence=d.get("recurrence","none"),notes=d.get("notes"))
+    db.session.add(r);db.session.commit();notify_owner(u,f"{p.name}: reminder created",f"{r.title} is due on {r.due_date.isoformat()}.",event="reminder_created");return ok({"id":r.id},201)
+
+@api.get("/notifications")
+@jwt_required(locations=["cookies"])
+def notifications():
+    u=user();process_due_reminders(owner_id=u.id)
+    rows=Notification.query.filter_by(user_id=u.id).order_by(Notification.created_at.desc()).limit(50).all()
+    return ok([{"id":n.id,"title":n.title,"message":n.message,"channel":n.channel,"status":n.status,"is_read":n.is_read,"created_at":n.created_at.isoformat()} for n in rows])
+
+@api.post("/notifications/<int:nid>/read")
+@jwt_required(locations=["cookies"])
+def notification_read(nid):
+    u=user();n=Notification.query.filter_by(id=nid,user_id=u.id).first()
+    if not n:return err("NOT_FOUND","Notification not found.",404)
+    n.is_read=True;db.session.commit();return ok({"id":n.id,"is_read":True})
+
+@api.get("/notifications/preferences")
+@jwt_required(locations=["cookies"])
+def notification_preferences():
+    u=user(); import os
+    return ok({"sms_configured":bool(os.getenv("TWILIO_ACCOUNT_SID") and os.getenv("TWILIO_AUTH_TOKEN") and os.getenv("TWILIO_FROM_NUMBER")),"phone_configured":bool(u.phone),"phone":u.phone})
+
+@api.post("/admin/process-reminders")
+@jwt_required(locations=["cookies"])
+def admin_process_reminders():
+    if get_jwt().get("role")!="admin":return err("FORBIDDEN","Admin access required.",403)
+    return ok(process_due_reminders())
 
 @api.post("/reminders/<int:rid>/complete")
 @jwt_required(locations=["cookies"])
