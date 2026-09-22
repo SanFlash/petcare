@@ -13,19 +13,29 @@
 </head>
 <body>
 <div id="pawcareLoader" class="pawcare-loader" aria-label="Loading PAWCARE 360" role="status">
-  <div class="loader-cinema" aria-hidden="true"></div>
+  <div class="loader-scene" aria-hidden="true">
+    <div class="loader-animal animal-dog"></div>
+    <div class="loader-animal animal-bird"></div>
+    <div class="loader-animal animal-horse"></div>
+    <div class="loader-animal animal-cat"></div>
+    <div class="loader-animal animal-rabbit"></div>
+    <div class="loader-animal animal-turtle"></div>
+    <div class="loader-animal animal-fish"></div>
+    <div class="loader-animal animal-guinea"></div>
+    <div class="loader-energy energy-one"></div>
+    <div class="loader-energy energy-two"></div>
+    <div class="loader-energy energy-three"></div>
+  </div>
   <div class="loader-vignette" aria-hidden="true"></div>
-  <div class="loader-particles loader-particles-a" aria-hidden="true"></div>
-  <div class="loader-particles loader-particles-b" aria-hidden="true"></div>
   <div class="loader-core">
     <div class="loader-logo-orbit">
       <span class="loader-ring ring-one"></span><span class="loader-ring ring-two"></span>
       <div class="loader-logo-glow"></div>
-      <img src="{{ url_for('static',filename='images/logo.png') }}" alt="">
+      <div class="loader-logo-disc"><img src="{{ url_for('static',filename='images/logo.png') }}" alt=""></div>
     </div>
     <div class="loader-wordmark"><strong>PAWCARE</strong><em>360</em></div>
     <div class="loader-progress"><span></span></div>
-    <div class="loader-caption">INITIALIZING ANIMAL CARE CENTER</div>
+    <div class="loader-caption">EVERY PAW. EVERY RECORD. EVERY REMINDER.</div>
   </div>
 </div>
 {% set public_page=request.path in ['/', '/login', '/register'] %}
