@@ -38,12 +38,45 @@ function renderNotifications(items,filter='all'){
  const count=items.filter(n=>!n.is_read).length,c=qs('#notificationCount');if(c){c.textContent=count||'';c.style.display=count?'grid':'none'}icons()
 }
 function modal(title,html,onSubmit){
- const wrap=document.createElement('div');wrap.className='modal-backdrop open';wrap.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="section-head"><div><span class="eyebrow">QUICK ACTION</span><h2>'+esc(title)+'</h2></div><button class="icon-btn close" type="button" aria-label="Close"><i data-lucide="x"></i></button></div>'+html+'</div>';
- document.body.appendChild(wrap);icons();const close=()=>wrap.remove();wrap.querySelector('.close').onclick=close;wrap.addEventListener('click',e=>{if(e.target===wrap)close()});document.body.classList.add('modal-open');
- const form=wrap.querySelector('form');if(form)form.onsubmit=async e=>{e.preventDefault();const submit=form.querySelector('button[type="submit"],button.btn');if(submit){submit.disabled=true;submit.dataset.old=submit.innerHTML;submit.innerHTML='<i data-lucide="loader-circle"></i> Saving...';icons()}try{await onSubmit(Object.fromEntries(new FormData(form)));close();}catch(x){if(submit){submit.disabled=false;submit.innerHTML=submit.dataset.old||'Save';icons()}toast('Could not save',x.message,'error')}};
+ const wrap=document.createElement('div');
+ wrap.className='modal-backdrop open';
+ wrap.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="section-head"><div><span class="eyebrow">QUICK ACTION</span><h2>'+esc(title)+'</h2></div><button class="icon-btn close" type="button" aria-label="Close"><i data-lucide="x"></i></button></div>'+html+'</div>';
+ document.body.appendChild(wrap);icons();
+ const close=()=>{wrap.remove();if(!document.querySelector('.modal-backdrop'))document.body.classList.remove('modal-open')};
+ wrap.querySelector('.close').onclick=close;
+ wrap.addEventListener('click',e=>{if(e.target===wrap)close()});
+ document.body.classList.add('modal-open');
+ const form=wrap.querySelector('form');
+ if(form)form.onsubmit=async e=>{
+   e.preventDefault();
+   const submit=form.querySelector('button[type="submit"],button.btn');
+   if(submit){submit.disabled=true;submit.dataset.old=submit.innerHTML;submit.innerHTML='<i data-lucide="loader-circle"></i> Saving...';icons()}
+   try{await onSubmit(new FormData(form));close();}
+   catch(x){if(submit){submit.disabled=false;submit.innerHTML=submit.dataset.old||'Save';icons()}toast('Could not save',x.message,'error')}
+ };
  wrap.querySelectorAll('input,select,textarea').forEach((el,i)=>{if(i===0)setTimeout(()=>el.focus(),50)});
  wrap.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
  return wrap
+}
+function openPetPhotoModal(pid,petName){
+ const html='<form enctype="multipart/form-data"><div class="photo-drop"><div class="photo-preview" id="petPhotoPreview"><i data-lucide="image-plus"></i></div><div class="photo-copy"><strong>Upload '+esc(petName||'pet')+' photo</strong><span>JPG, PNG or WebP · max 5 MB</span></div><input id="petPhotoInput" name="photo" type="file" accept="image/jpeg,image/png,image/webp" required><label for="petPhotoInput" class="btn btn-secondary"><i data-lucide="upload"></i>Choose image</label></div><p class="muted">Optional. The image will appear on the pet profile and dashboard.</p><button class="btn btn-primary" type="submit"><i data-lucide="image-up"></i>Save pet photo</button></form>';
+ const wrap=modal('Pet profile photo',html,async formData=>{
+   const token=cookieValue('csrf_access_token');
+   const headers=token?{'X-CSRF-TOKEN':decodeURIComponent(token)}:{};
+   const response=await fetch('/api/pets/'+pid+'/photo',{method:'POST',credentials:'include',headers,body:formData});
+   let data={};try{data=await response.json()}catch{}
+   if(!response.ok)throw new Error(data?.error?.message||data?.message||'Could not upload image');
+   toast('Photo updated',(petName||'Pet')+' profile photo has been saved.');
+   setTimeout(()=>location.reload(),350);
+ });
+ const input=wrap.querySelector('#petPhotoInput'),preview=wrap.querySelector('#petPhotoPreview');
+ input?.addEventListener('change',()=>{
+   const file=input.files?.[0];if(!file)return;
+   if(file.size>5*1024*1024){toast('Image too large','Choose an image smaller than 5 MB.','error');input.value='';return}
+   const url=URL.createObjectURL(file);
+   preview.innerHTML='<img src="'+url+'" alt="Pet photo preview">';
+ });
+ return wrap;
 }
 function openOwnerPhoneModal(){modal('Owner mobile number','<form><div class="phone-help">Use 10 digits or international format. Example <strong>+919876543210</strong>.</div><label>Mobile number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" value="'+esc(document.querySelector('.phone-status')?.textContent.replace('✓ ','')||'')+'" placeholder="9876543210" required></label><p class="muted">This number is stored with the owner account and receives scheduled care SMS when messaging is configured.</p><button class="btn btn-primary" type="submit">Save mobile number</button></form>',async d=>{await api('/api/profile',{method:'PATCH',body:JSON.stringify(d)});toast('Mobile number saved','Scheduled owner alerts will use this number.');setTimeout(()=>location.reload(),500)})}
 function openPetModal(){modal('Create a pet profile','<form><div class="modal-grid"><label>Pet name<input name="name" required></label><label>Species<input name="species" placeholder="Dog, Cat..." required></label></div><label>Owner mobile number<input name="owner_phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="9876543210" required></label><p class="phone-help">Enter 10 digits or international format. This number receives 2-day, 1-day and event-day SMS reminders.</p><div class="modal-grid"><label>Breed<input name="breed"></label><label>Weight<input name="weight" type="number" step="0.1"></label></div><div class="modal-grid"><label>Gender<input name="gender"></label><label>Color<input name="color"></label></div><div class="modal-grid"><label>Date of birth<input name="date_of_birth" type="date"></label><label>Microchip ID<input name="microchip_id"></label></div><label>Allergies<textarea name="allergies" rows="2"></textarea></label><label>Existing conditions<textarea name="conditions" rows="2"></textarea></label><button class="btn btn-primary" type="submit">Create profile <i data-lucide="arrow-right"></i></button></form>',async d=>{const r=await api('/api/pets',{method:'POST',body:JSON.stringify(d)});toast('Pet added','Owner number saved as '+(r.data?.owner_phone||d.owner_phone)+'.');setTimeout(()=>location.href='/pets/'+r.data.id,500)})}
