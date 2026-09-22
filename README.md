@@ -24,6 +24,10 @@ This repository now contains:
 - Vercel Python entrypoint/configuration
 - Health check endpoint at `/health`
 - Basic smoke tests with Pytest
+- Animated 3D-style landing experience with particle field, glassmorphism, tilt cards and responsive motion
+- Notification center with live in-app care feed
+- Twilio SMS integration for owner alerts
+- Scheduled reminder-processing worker for Render
 
 The project follows the specification's requested Python 3.11 / Flask / Supabase / Gunicorn direction. fileciteturn0file0L26-L48
 
@@ -92,6 +96,9 @@ SUPABASE_STORAGE_BUCKET=petcare
 DEMO_ADMIN_EMAIL=admin@petcare.local
 DEMO_ADMIN_PASSWORD=PetCare@12345
 APP_BASE_URL=https://your-domain
+TWILIO_ACCOUNT_SID=your-twilio-account-sid
+TWILIO_AUTH_TOKEN=your-twilio-auth-token
+TWILIO_FROM_NUMBER=+1xxxxxxxxxx
 ```
 
 The application expects secrets and database credentials through environment variables rather than source code. fileciteturn0file0L52-L82
@@ -204,13 +211,65 @@ from run import app
 
 This avoids the common “no Flask entrypoint found” problem by explicitly pointing Vercel at the Flask app.
 
-## Notifications
+## Notifications and SMS
 
-The current implementation persists in-app notification records and creates reminder records for due-date driven tasks.
+PetCare now has a notification pipeline designed around the owner's phone:
 
-External email, push, WhatsApp and calendar integrations are intentionally configuration-driven. The product specification identifies these as notification/integration channels, but this repository's core build does not pretend an external provider is active when credentials are absent. fileciteturn0file0L492-L620
+1. A care event creates an in-app notification.
+2. If the owner has a phone number and Twilio is configured, an SMS is attempted.
+3. Upcoming reminders are processed by `scripts/process_notifications.py`.
+4. The Render configuration includes a scheduled notification worker.
+5. SMS attempts are recorded as `sms/sent` or `sms/failed` notification records.
 
-For production reminders at scale, use a separate worker/cron architecture rather than relying only on an in-process scheduler. fileciteturn0file0L1247-L1289
+Configure:
+
+```env
+TWILIO_ACCOUNT_SID=...
+TWILIO_AUTH_TOKEN=...
+TWILIO_FROM_NUMBER=+1...
+```
+
+Use an E.164 phone number for the owner, for example `+919876543210`.
+
+The browser never receives Twilio credentials. They remain server-side environment variables.
+
+The notification architecture follows the product specification's requirement for reminders and multi-channel notifications while keeping external providers optional until credentials are configured. fileciteturn0file0L492-L620
+
+### Manual worker test
+
+After configuring your environment:
+
+```bash
+python scripts/process_notifications.py
+```
+
+For production, the Render cron service runs the same worker automatically.
+
+
+## UI / UX redesign
+
+The new interface is intentionally different from the earlier utility-dashboard approach.
+
+It now uses:
+
+- Dark premium visual system
+- Glassmorphism surfaces
+- 3D-style depth and perspective
+- Interactive pointer tilt
+- Animated floating pet card
+- Particle/network background
+- Ambient gradient orbs
+- Motion-based reveal transitions
+- Animated progress/routine indicators
+- Responsive touch-friendly layouts
+- Quick-action modal forms instead of browser `prompt()` flows
+- Notification drawer
+- Toast feedback after actions
+- Clear care-status chips
+- Mobile-specific layout breakpoints
+- Existing repository pet imagery reused for relevant visual context
+
+Animations are implemented with CSS and lightweight browser JavaScript rather than a heavy front-end framework, keeping deployment simple.
 
 ## Security notes
 
