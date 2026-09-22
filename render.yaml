@@ -39,10 +39,6 @@ services:
         sync: false
       - key: APP_TIMEZONE
         value: Asia/Kolkata
-      - key: TWILIO_MESSAGING_SERVICE_SID
-        sync: false
-      - key: APP_TIMEZONE
-        value: Asia/Kolkata
   - type: cron
     name: petcare-notification-worker
     runtime: python
@@ -70,3 +66,7 @@ services:
         sync: false
       - key: TWILIO_FROM_NUMBER
         sync: false
+      - key: TWILIO_MESSAGING_SERVICE_SID
+        sync: false
+      - key: APP_TIMEZONE
+        value: Asia/Kolkata
