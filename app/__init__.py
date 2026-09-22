@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, jsonify, render_template, request
 from sqlalchemy import inspect
 
 from .config import Config
@@ -132,10 +132,19 @@ def create_app():
 
     @app.errorhandler(500)
     def internal_error(exc):
-        # Always log the real traceback in Render logs while showing the user
-        # a useful page instead of Flask's generic internal-server-error page.
+        # Always log the real traceback in Render logs. API callers receive
+        # JSON so the frontend can show the actual safe error message instead
+        # of trying to parse an HTML 500 page.
         app.logger.exception("Unhandled application error")
         db.session.rollback()
+        if request.path.startswith("/api/"):
+            return jsonify({
+                "success": False,
+                "error": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "The server could not complete that request. Please try again.",
+                },
+            }), 500
         return render_template(
             "error.html",
             error_id=getattr(exc, "original_exception", None) or exc,
