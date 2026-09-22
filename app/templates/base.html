@@ -16,8 +16,9 @@
 
 {% if public_page %}
 <header class="public-topbar">
-  <a class="brand" href="/">
-    <span class="brand-mark"><img src="{{ url_for('static',filename='images/logo.png') }}" alt="PAWCARE 360"></span>
+  <a class="brand public-brand" href="/" aria-label="PAWCARE360 home">
+    <span class="brand-mark"><img src="{{ url_for('static',filename='images/logo.png') }}" alt="PAWCARE360 logo"></span>
+    <span class="brand-wordmark"><strong>PAWCARE</strong><em>360</em></span>
   </a>
   <nav class="public-nav">
     <a href="/">Home</a>
