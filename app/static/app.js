@@ -1,4 +1,19 @@
-async function api(path,options={}){const r=await fetch(path,{credentials:'include',...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});let d={};try{d=await r.json()}catch{}if(!r.ok)throw new Error(d?.error?.message||'Request failed');return d}
+function cookieValue(name){
+ const prefix=name+'=';
+ return document.cookie.split(';').map(x=>x.trim()).find(x=>x.startsWith(prefix))?.slice(prefix.length)||'';
+}
+async function api(path,options={}){
+ const method=(options.method||'GET').toUpperCase();
+ const headers={'Content-Type':'application/json',...(options.headers||{})};
+ if(!['GET','HEAD','OPTIONS'].includes(method)){
+   const csrf=cookieValue('csrf_access_token');
+   if(csrf) headers['X-CSRF-TOKEN']=decodeURIComponent(csrf);
+ }
+ const r=await fetch(path,{credentials:'include',...options,headers});
+ let d={};try{d=await r.json()}catch{}
+ if(!r.ok)throw new Error(d?.error?.message||d?.message||'Request failed');
+ return d;
+}
 const qs=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 function icons(){if(window.lucide)lucide.createIcons()}
