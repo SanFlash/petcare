@@ -192,10 +192,28 @@ def logout():r,s=ok({"message":"Logged out"});unset_jwt_cookies(r);return r,s
 @api.get("/dashboard")
 @jwt_required(locations=["cookies"])
 def dashboard_api():
-    u=user(); process_due_reminders(owner_id=u.id)
-    return ok({"user":{"id":u.id,"name":u.full_name,"email":u.email,"role":u.role,"phone":u.phone},
-        "pets":[pd(p) for p in Pet.query.filter_by(owner_id=u.id).all()],
-        "reminders":[{"id":r.id,"title":r.title,"due_date":r.due_date.isoformat(),"status":r.status,"type":r.reminder_type} for r in Reminder.query.join(Pet).filter(Pet.owner_id==u.id).order_by(Reminder.due_date.asc()).limit(20).all()]})
+    u=user()
+    if not u:
+        return err("AUTHENTICATION_REQUIRED","Please sign in again.",401)
+    try:
+        process_due_reminders(owner_id=u.id)
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Dashboard API reminder processing failed for user %s",u.id)
+    try:
+        pets=Pet.query.filter_by(owner_id=u.id).order_by(Pet.name).all()
+        reminders=Reminder.query.join(Pet).filter(
+            Pet.owner_id==u.id
+        ).order_by(Reminder.due_date.asc()).limit(20).all()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Dashboard API data query failed for user %s",u.id)
+        return err("DATA_UNAVAILABLE","Dashboard data could not be loaded. Please try again.",503)
+    return ok({
+        "user":{"id":u.id,"name":u.full_name,"email":u.email,"role":u.role,"phone":u.phone},
+        "pets":[pd(p) for p in pets],
+        "reminders":[{"id":r.id,"title":r.title,"due_date":r.due_date.isoformat(),"status":r.status,"type":r.reminder_type} for r in reminders]
+    })
 
 @api.post("/pets")
 @jwt_required(locations=["cookies"])
@@ -312,8 +330,20 @@ def search():
 @api.get("/notifications")
 @jwt_required(locations=["cookies"])
 def notifications():
-    u=user();process_due_reminders(owner_id=u.id)
-    rows=Notification.query.filter_by(user_id=u.id).order_by(Notification.created_at.desc()).limit(50).all()
+    u=user()
+    if not u:
+        return err("AUTHENTICATION_REQUIRED","Please sign in again.",401)
+    try:
+        process_due_reminders(owner_id=u.id)
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Notification reminder processing failed for user %s",u.id)
+    try:
+        rows=Notification.query.filter_by(user_id=u.id).order_by(Notification.created_at.desc()).limit(50).all()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Notification query failed for user %s",u.id)
+        return err("DATA_UNAVAILABLE","Notifications could not be loaded. Please try again.",503)
     return ok([{"id":n.id,"title":n.title,"message":n.message,"channel":n.channel,"status":n.status,"is_read":n.is_read,"created_at":n.created_at.isoformat()} for n in rows])
 
 @api.post("/notifications/<int:nid>/read")
@@ -353,7 +383,7 @@ def test_sms():
 @jwt_required(locations=["cookies"])
 def notification_preferences():
     u=user();import os
-    return ok({"sms_configured":bool(os.getenv("TWILIO_ACCOUNT_SID") and os.getenv("TWILIO_AUTH_TOKEN") and os.getenv("TWILIO_FROM_NUMBER")),"phone_configured":bool(u.phone),"phone":u.phone})
+    return ok({"sms_configured":bool(os.getenv("TWILIO_ACCOUNT_SID") and os.getenv("TWILIO_AUTH_TOKEN") and (os.getenv("TWILIO_FROM_NUMBER") or os.getenv("TWILIO_MESSAGING_SERVICE_SID"))),"phone_configured":bool(u.phone),"phone":u.phone})
 
 @api.post("/admin/process-reminders")
 @jwt_required(locations=["cookies"])
