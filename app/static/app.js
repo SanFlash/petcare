@@ -150,9 +150,11 @@ function initTheme(){const root=document.documentElement;const saved=localStorag
 function initSidebar(){
  const side=qs('#sidebar'),scrim=qs('#sidebarScrim');
  const links=[...document.querySelectorAll('.side-link')];
- const open=()=>{side?.classList.add('open');scrim?.classList.add('open')};
- const close=()=>{side?.classList.remove('open');scrim?.classList.remove('open')};
+ const open=()=>{side?.classList.add('open');scrim?.classList.add('open');document.body.classList.add('nav-open')};
+ const close=()=>{side?.classList.remove('open');scrim?.classList.remove('open');document.body.classList.remove('nav-open')};
  qs('#mobileMenu')?.addEventListener('click',open);
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+ window.addEventListener('resize',()=>{if(window.innerWidth>=901)close()});
  scrim?.addEventListener('click',close);
 
  const setActive=activeLink=>{
